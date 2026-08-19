@@ -1,100 +1,127 @@
 #!/usr/bin/env bash
-# Install the my-dsh file canvas into a DeepSeek Harness profile, and back out
-# the vendored dsh-artifacts canvas it replaces.
+# Install every plugin in this directory into a DeepSeek Harness profile.
 #
-# Idempotent: the profile patch is generated wholesale rather than appended to,
-# so re-running cannot accumulate duplicate entries or leave a stale document.
+# Adding a plugin means adding a directory — this script discovers them rather
+# than listing them. A plugin directory is any child of plugins/ holding a
+# package.json, and it may contribute three things:
+#
+#   package.json      required. `name` decides where it installs, and a
+#                     `scripts.build` entry is run before it is copied.
+#   cordis.patch.yml  optional. Loader rows merged into the profile patch.
+#   agent.preset.yml  optional. Rows appended to the `artifacts` agent preset,
+#                     for plugins registering a tool (`tools` is agent-scoped,
+#                     so a tool cannot be a profile row).
+#
+# Idempotent: the profile patch and the preset are generated whole on every
+# run, so re-running cannot accumulate duplicate rows.
 set -euo pipefail
 
 DSH_HOME="${DSH_HOME:-$HOME/.dsh}"
-REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PKG_DEST="$DSH_HOME/profiles/node_modules/@my-dsh"
+PLUGINS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_DIR="$(dirname "$PLUGINS_DIR")"
+PROFILE_MODULES="$DSH_HOME/profiles/node_modules"
 PATCH_FILE="$DSH_HOME/profiles/web/cordis.patch.yml"
-PRESET_DIR="$DSH_HOME/.agent-presets/artifacts"
+PRESET_ID="artifacts"
+PRESET_DIR="$DSH_HOME/.agent-presets/$PRESET_ID"
 
-echo "my-dsh file canvas installer"
+echo "my-dsh plugin installer"
 echo "  DSH_HOME: $DSH_HOME"
 echo
 
-# ── 1. Remove the vendored dsh-artifacts install ─────────────────────────────
-# Only from DSH_HOME — the vendor/ checkout in the project is kept as reference.
-VENDOR_PKGS="$DSH_HOME/profiles/node_modules/@dsh-artifact"
-if [ -d "$VENDOR_PKGS" ]; then
-  rm -rf "$VENDOR_PKGS"
-  echo "  ✓ removed vendor packages (@dsh-artifact)"
+# ── 0. Discover plugins ──────────────────────────────────────────────────────
+PLUGINS=()
+for dir in "$PLUGINS_DIR"/*/; do
+  [ -f "${dir}package.json" ] && PLUGINS+=("${dir%/}")
+done
+if [ ${#PLUGINS[@]} -eq 0 ]; then
+  echo "  ! no plugins found in $PLUGINS_DIR" >&2
+  exit 1
 fi
-if [ -d "$DSH_HOME/.agent-presets/artifact" ]; then
-  rm -rf "$DSH_HOME/.agent-presets/artifact"
-  echo "  ✓ removed vendor agent preset (artifact)"
-fi
-# Earlier installs of this plugin used the id `file-canvas`; drop it so a
-# re-run does not leave two presets offering the same tool.
-if [ -d "$DSH_HOME/.agent-presets/file-canvas" ]; then
-  rm -rf "$DSH_HOME/.agent-presets/file-canvas"
-  echo "  ✓ removed superseded preset (file-canvas)"
-fi
+echo "  found ${#PLUGINS[@]} plugin(s): $(for p in "${PLUGINS[@]}"; do printf '%s ' "$(basename "$p")"; done)"
+echo
 
-# ── 2. Build and install our packages ────────────────────────────────────────
-# The harness serves a client package's `./client` export verbatim, so the
-# browser half must be wrapped into module-loader factory form first. The wrap
-# step is plain node with no dependencies — see client-ui-file-canvas/build.mjs.
-( cd "$REPO_DIR/client-ui-file-canvas" && node build.mjs )
+pkg_field() { node -p "JSON.parse(require('fs').readFileSync('$1/package.json','utf8')).$2 ?? ''"; }
 
-mkdir -p "$PKG_DEST"
-for pkg in tool-file-canvas client-ui-file-canvas client-ui-layout-wide; do
-  if [ ! -d "$REPO_DIR/$pkg" ]; then
-    echo "  ! missing package: $pkg" >&2
-    exit 1
+# ── 1. Retire the vendored dsh-artifacts install ─────────────────────────────
+# Only from DSH_HOME — the reference checkouts in the repo are left alone.
+for stale in "$PROFILE_MODULES/@dsh-artifact" "$DSH_HOME/.agent-presets/artifact" "$DSH_HOME/.agent-presets/file-canvas"; do
+  if [ -e "$stale" ]; then
+    rm -rf "$stale"
+    echo "  ✓ removed superseded $(basename "$stale")"
   fi
-  rm -rf "${PKG_DEST:?}/$pkg"
-  cp -r "$REPO_DIR/$pkg" "$PKG_DEST/$pkg"
-  echo "  ✓ installed @my-dsh/$pkg"
 done
 
-# ── 3. Generate the profile patch ────────────────────────────────────────────
-# Written from scratch every run. The vendor installer appended to this file,
-# which is how it collided with the shipped `[]` placeholder; owning the whole
-# document removes that whole class of failure.
-mkdir -p "$(dirname "$PATCH_FILE")"
-if [ -f "$PATCH_FILE" ] && [ ! -f "$PATCH_FILE.pre-file-canvas" ]; then
-  cp "$PATCH_FILE" "$PATCH_FILE.pre-file-canvas"
-  echo "  ✓ backed up previous patch → $(basename "$PATCH_FILE").pre-file-canvas"
+# ── 2. Install dependencies for plugins that build ───────────────────────────
+NEEDS_BUILD=0
+for plugin in "${PLUGINS[@]}"; do
+  [ -n "$(pkg_field "$plugin" 'scripts?.build')" ] && NEEDS_BUILD=1
+done
+if [ "$NEEDS_BUILD" -eq 1 ] && [ ! -d "$REPO_DIR/node_modules" ]; then
+  echo "  · installing build dependencies (first run)…"
+  ( cd "$REPO_DIR" && npm install --no-audit --no-fund --silent )
+  echo "  ✓ dependencies installed"
 fi
 
-cat > "$PATCH_FILE" <<'PATCH'
-# Managed by my-dsh/plugins/install.sh — regenerated on every install.
-# A top-level YAML array of loader patch entries.
+# ── 3. Build and install each plugin ─────────────────────────────────────────
+for plugin in "${PLUGINS[@]}"; do
+  name="$(pkg_field "$plugin" 'name')"
+  if [ -z "$name" ]; then
+    echo "  ! $(basename "$plugin")/package.json has no name" >&2
+    exit 1
+  fi
 
-# File canvas (browser): renders any workspace file in the details side panel.
-- insert:
-    - id: ui-file-canvas
-      name: '@my-dsh/client-ui-file-canvas'
+  if [ -n "$(pkg_field "$plugin" 'scripts?.build')" ]; then
+    ( cd "$plugin" && npm run build --silent )
+  fi
 
-# Wide details column: the canvas opens at ~35% of the viewport (min 420px) and
-# ~70% by dragging, instead of the stock 360px-open / 520px-max. A patch cannot rename a
-# row, so the shipped layout is disabled and the fork inserted beside it.
-- id: ui-layout
-  disabled: true
+  dest="$PROFILE_MODULES/$name"
+  mkdir -p "$(dirname "$dest")"
+  rm -rf "$dest"
+  mkdir -p "$dest"
+  # Copy only what the package declares it ships, plus its manifest, so build
+  # inputs and node_modules never reach the profile.
+  cp "$plugin/package.json" "$dest/"
+  while IFS= read -r entry; do
+    [ -z "$entry" ] && continue
+    [ -e "$plugin/$entry" ] || continue
+    # `files` entries may name a nested path ("lib/index.js"), so the parent
+    # has to exist before the copy — cp will not create it, and a swallowed
+    # failure here would install a package missing its entry point.
+    mkdir -p "$dest/$(dirname "$entry")"
+    cp -R "$plugin/$entry" "$dest/$(dirname "$entry")/"
+  done < <(node -p "(JSON.parse(require('fs').readFileSync('$plugin/package.json','utf8')).files ?? []).join('\n')")
+  echo "  ✓ installed $name"
+done
 
-- insert:
-    - id: ui-layout-wide
-      name: '@my-dsh/client-ui-layout-wide'
+# ── 4. Generate the profile patch ────────────────────────────────────────────
+# Written whole every run. The vendor installer appended to this file, which is
+# how it collided with the shipped `[]` placeholder and left the profile
+# unparseable; owning the document removes that class of failure.
+mkdir -p "$(dirname "$PATCH_FILE")"
+if [ -f "$PATCH_FILE" ] && [ ! -f "$PATCH_FILE.pre-my-dsh" ]; then
+  cp "$PATCH_FILE" "$PATCH_FILE.pre-my-dsh"
+  echo "  ✓ backed up previous patch → $(basename "$PATCH_FILE").pre-my-dsh"
+fi
 
-# File canvas (host): GET /canvas/file, the contained reader the canvas fetches
-# envelopes and image/PDF bytes from. Lives in the web profile because it needs
-# the `webServer` service; the `show_file` tool half lives in the agent preset.
-- insert:
-    - id: host-file-canvas-route
-      name: '@my-dsh/tool-file-canvas/route'
-
-# Mount the artifacts preset (standard + the show_file tool) by default.
-- id: agent-presets
-  config:
-    default: artifacts
-PATCH
+{
+  echo "# Managed by my-dsh/plugins/install.sh — regenerated on every install."
+  echo "# A top-level YAML array of loader patch entries, merged from each"
+  echo "# plugin's own cordis.patch.yml."
+  for plugin in "${PLUGINS[@]}"; do
+    [ -f "$plugin/cordis.patch.yml" ] || continue
+    echo
+    echo "# ── $(basename "$plugin") ─────────────────────────────────────────"
+    cat "$plugin/cordis.patch.yml"
+  done
+  echo
+  echo "# Mount the $PRESET_ID preset by default."
+  echo "- id: agent-presets"
+  echo "  config:"
+  echo "    default: $PRESET_ID"
+} > "$PATCH_FILE"
 echo "  ✓ wrote $PATCH_FILE"
 
-# ── 4. Create the agent preset ───────────────────────────────────────────────
+# ── 5. Generate the agent preset ─────────────────────────────────────────────
 find_standard_preset() {
   local candidate dsh_real pkg_root
   if command -v dsh >/dev/null 2>&1; then
@@ -113,25 +140,23 @@ find_standard_preset() {
   return 1
 }
 
-mkdir -p "$PRESET_DIR"
 STANDARD_PRESET="$(find_standard_preset || true)"
 if [ -z "$STANDARD_PRESET" ]; then
-  echo "  ! could not find the standard agent preset" >&2
-  echo "    create $PRESET_DIR/agent.cordis.yml manually, then add the tool-file-canvas entry" >&2
+  echo "  ! could not find the shipped standard preset" >&2
   exit 1
 fi
 
+mkdir -p "$PRESET_DIR"
 cp "$STANDARD_PRESET" "$PRESET_DIR/agent.cordis.yml"
-echo "  ✓ copied standard preset ($STANDARD_PRESET)"
-
-cat >> "$PRESET_DIR/agent.cordis.yml" <<'PRESET'
-
-# ── file canvas ─────────────────────────────────────────────────────────────
-# The model-facing `show_file` tool: put any workspace file on the canvas.
-- id: tool-file-canvas
-  name: '@my-dsh/tool-file-canvas'
-PRESET
-echo "  ✓ added tool-file-canvas to preset"
+for plugin in "${PLUGINS[@]}"; do
+  [ -f "$plugin/agent.preset.yml" ] || continue
+  {
+    echo
+    echo "# ── $(basename "$plugin") ─────────────────────────────────────────"
+    cat "$plugin/agent.preset.yml"
+  } >> "$PRESET_DIR/agent.cordis.yml"
+  echo "  ✓ added $(basename "$plugin") to the $PRESET_ID preset"
+done
 
 cat > "$PRESET_DIR/preset.yml" <<'PRESET'
 name: Artifacts

@@ -1,0 +1,6 @@
+# Context dashboard tab and the /context command. The host half registers a
+# session-projection unit; the browser half is loaded from the package's
+# `./client` export because the package declares `dsh.client`.
+- insert:
+    - id: context
+      name: '@my-dsh/context'

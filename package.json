@@ -1,0 +1,10 @@
+{
+  "name": "my-dsh",
+  "private": true,
+  "description": "DeepSeek Harness plugins developed in this workspace.",
+  "workspaces": ["plugins/*"],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "install-plugins": "bash plugins/install.sh"
+  }
+}

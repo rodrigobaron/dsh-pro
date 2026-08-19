@@ -1,0 +1,4 @@
+# Artifact panel: renders any workspace file in the details side panel.
+- insert:
+    - id: ui-file-canvas
+      name: '@my-dsh/client-ui-file-canvas'

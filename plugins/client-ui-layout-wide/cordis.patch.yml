@@ -1,0 +1,9 @@
+# Wide details column: an artifact opens at ~35% of the viewport (min 420px)
+# and drags out to ~70%, instead of the stock 360px-open / 520px-max. A patch
+# cannot rename a row, so the shipped layout is disabled and the fork inserted.
+- id: ui-layout
+  disabled: true
+
+- insert:
+    - id: ui-layout-wide
+      name: '@my-dsh/client-ui-layout-wide'
