@@ -1,0 +1,22 @@
+This package is a fork of dsh-context by bowenliang123, used under the
+Apache License 2.0. The original project lives at:
+
+    https://github.com/bowenliang123/dsh-context
+
+Changes from upstream:
+  - renamed to @my-dsh/context so it installs alongside the other plugins in
+    this repository under one installer;
+  - removed the "Plugin Info" card from the context dashboard, along with the
+    modules that fed it (client/meta.ts, client/latestVersion.ts,
+    client/components/pluginInfo.tsx), its stylesheet rules, and its
+    plugin.* i18n keys. This also drops the outbound npm request that
+    latestVersion.ts made on render to check for a newer release;
+  - let the last card in a wrapper column stretch to its column's height, so
+    removing the Plugin Info card does not leave a gap under the shorter
+    column (client/styles.ts);
+  - added "DOM.Iterable" to tsconfig lib so the strict typecheck passes on
+    the TypeScript version pinned here.
+
+Everything else under src/ is upstream's implementation.
+
+The full Apache License 2.0 text is in LICENSE.
