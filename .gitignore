@@ -7,5 +7,12 @@ reference/
 .DS_Store
 *.swp
 
-# Dependencies (nothing here installs any today; guard against it later)
+# Dependencies
 node_modules/
+
+# Build output. install.sh builds every plugin that declares a build script,
+# so these are reproducible and would only add diff noise. Note the exceptions:
+# client-ui-file-canvas/lib/index.js is a hand-written host entry, and
+# client-ui-layout-wide/lib/ is the fork itself, not generated.
+plugins/context/lib/
+plugins/client-ui-file-canvas/lib/client.js
