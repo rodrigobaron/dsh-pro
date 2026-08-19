@@ -1,0 +1,11 @@
+# Vendored DeepSeek Harness plugin kept only as an implementation reference
+# while this project is being built. Remove this entry once it is no longer
+# needed — it carries its own .git, so tracking it would embed a second repo.
+reference/
+
+# Editor and OS noise
+.DS_Store
+*.swp
+
+# Dependencies (nothing here installs any today; guard against it later)
+node_modules/
