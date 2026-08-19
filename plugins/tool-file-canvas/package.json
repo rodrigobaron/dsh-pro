@@ -1,0 +1,24 @@
+{
+  "name": "@my-dsh/tool-file-canvas",
+  "description": "Host half of the file canvas: the `open_file` tool plus a contained file-read route serving any workspace file to the browser.",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./route": "./lib/route.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/route.js",
+    "lib/shared.js",
+    "lib/filetype.js"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.1",
+    "@deepseek-ai/dsh-system-prompt": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-tools": "^0.1.0-rc.6"
+  }
+}
