@@ -1,0 +1,13 @@
+# /deep-research <topic>
+#
+# The host half registers the `deep-research` skill and expands the command on
+# the way into the model, so the transcript keeps showing what the user typed.
+# The browser half only adds the entry to the `/` menu — it does not intercept
+# Enter, because the message is meant to be sent normally.
+#
+# Search runs through @my-dsh/search's free engines. There is no page fetch in
+# this deployment (dsh-base sets `fetch: false` and no fetch provider is
+# mounted), so the skill is explicit that research is snippet-based.
+- insert:
+    - id: deep-research
+      name: '@my-dsh/deep-research'
