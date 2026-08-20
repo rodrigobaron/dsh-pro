@@ -55,6 +55,10 @@ function apply(ctx) {
     () =>
       ctx.skills.register({
         name: SKILL_NAME,
+        // Required by SkillRegistration and easy to miss, because it is not one
+        // of the fields the type omits. Without it the registry accepts the
+        // skill but fails when the model loads it: "source must be a string".
+        source: "runtime",
         description:
           "Show a workspace file to the user as a rendered artifact — source code, Markdown, HTML, images, PDFs, or data files — in a side panel, without spending context on the file body.",
         whenToUse:
