@@ -8,6 +8,11 @@
  */
 
 export const STYLES = [
+  // Scoped box-sizing reset. The harness's reset does not reach this plugin's
+  // nodes, so a padded `width: 100%` row resolved to 100% of the CONTENT box
+  // and then added its own padding on top — every file row rendered 24px wider
+  // than the pane and had its trailing button clipped.
+  '.gr-root *, .gr-root *::before, .gr-root *::after { box-sizing: border-box; }',
   // The conversation composer floats over the bottom of the view, so the tab
   // reserves clearance for it rather than letting the split run underneath.
   '.gr-root { display: flex; flex-direction: column; height: 100%; min-height: 0; gap: 12px; padding: 16px 16px 96px; box-sizing: border-box; color: var(--dsw-alias-label-primary); }',
@@ -37,14 +42,19 @@ export const STYLES = [
   '.gr-diff { flex: 1; min-width: 0; display: flex; flex-direction: column; min-height: 0; border: 1px solid var(--dsw-alias-border-l1); border-radius: 10px; background: var(--dsw-alias-bg-layer-1); overflow: hidden; }',
 
   // ---- file list ----
-  '.gr-group { display: flex; align-items: center; gap: 8px; padding: 8px 12px; font-size: 11px; font-weight: 600; letter-spacing: 0.03em; text-transform: uppercase; color: var(--dsw-alias-label-secondary); background: var(--dsw-alias-bg-layer-2); border-bottom: 1px solid var(--dsw-alias-border-l1); position: sticky; top: 0; z-index: 1; }',
-  '.gr-scroll { overflow: auto; flex: 1; min-height: 0; }',
-  '.gr-file { display: flex; align-items: center; gap: 8px; padding: 6px 12px; cursor: pointer; border: none; background: none; width: 100%; text-align: left; color: inherit; font: inherit; }',
+  '.gr-group { display: flex; align-items: center; flex-wrap: wrap; row-gap: 6px; gap: 8px; padding: 8px 12px; font-size: 11px; font-weight: 600; letter-spacing: 0.03em; text-transform: uppercase; color: var(--dsw-alias-label-secondary); background: var(--dsw-alias-bg-layer-2); border-bottom: 1px solid var(--dsw-alias-border-l1); position: sticky; top: 0; z-index: 1; }',
+  '.gr-scroll { overflow-y: auto; overflow-x: hidden; flex: 1; min-height: 0; }',
+  // `position: relative` + `overflow: hidden` anchor the hover actions, which
+  // are taken OUT of the flow below — in the flow they reserved ~106px on
+  // every row and pushed the last button past the pane's edge.
+  '.gr-file { position: relative; overflow: hidden; display: flex; align-items: center; gap: 8px; padding: 6px 12px; cursor: pointer; border: none; background: none; width: 100%; min-width: 0; text-align: left; color: inherit; font: inherit; }',
   '.gr-file:hover { background: var(--dsw-alias-bg-layer-2); }',
   '.gr-file[data-selected="true"] { background: var(--dsw-alias-bg-layer-2); box-shadow: inset 2px 0 0 var(--dsw-alias-label-primary); }',
   '.gr-file-name { flex: 1; min-width: 0; font-size: 12px; font-family: var(--ds-font-family-code, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; direction: rtl; text-align: left; }',
-  '.gr-file-actions { display: flex; gap: 4px; opacity: 0; flex: none; }',
-  '.gr-file:hover .gr-file-actions, .gr-file[data-selected="true"] .gr-file-actions { opacity: 1; }',
+  // Floated over the row's right edge on hover, with a fade so the filename
+  // slides under them instead of being truncated to make room.
+  '.gr-file-actions { position: absolute; right: 0; top: 0; bottom: 0; display: flex; align-items: center; gap: 4px; padding: 0 12px 0 24px; opacity: 0; pointer-events: none; background: linear-gradient(to right, transparent, var(--dsw-alias-bg-layer-2) 20%); }',
+  '.gr-file:hover .gr-file-actions, .gr-file[data-selected="true"] .gr-file-actions { opacity: 1; pointer-events: auto; }',
   '.gr-letter { flex: none; width: 15px; text-align: center; font-size: 11px; font-weight: 700; font-family: var(--ds-font-family-code, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace); }',
   '.gr-letter[data-k="A"] { color: var(--dsw-alias-state-success-primary, #30a46c); }',
   '.gr-letter[data-k="D"] { color: var(--dsw-alias-state-error-primary, #e5484d); }',
