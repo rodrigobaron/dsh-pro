@@ -58,28 +58,6 @@ function openCanvasPanel() {
 let pendingPath = null;
 
 /**
- * Whether the transcript's initial render has settled.
- *
- * Opening a session mounts every historical tool row at once. Auto-opening on
- * mount would therefore hijack the panel with whatever file was shown longest
- * ago, every time a session is opened. Only rows mounting AFTER the first
- * render pass represent a tool that just ran.
- */
-let hydrated = false;
-if (typeof window !== "undefined") {
-  // A frame plus a tick: the frame lets the initial render commit, the timeout
-  // covers rows that arrive in a follow-up batch.
-  window.requestAnimationFrame(() =>
-    window.setTimeout(() => {
-      hydrated = true;
-    }, 400),
-  );
-}
-
-/** Artifacts already surfaced, so a re-render never re-opens the panel. */
-const autoOpened = new Set();
-
-/**
  * Directory of the file currently on the canvas. A relative path clicked in the
  * transcript most often means "next to what I am already looking at", so it is
  * offered to the host as the first base before the workspace roots.
@@ -499,19 +477,12 @@ function ShowFileToolRow(props) {
   const sessionId = props.sessionId;
   const openCanvas = props.openCanvas;
 
+  // Recorded, not opened: the panel is the user's to open from the card. A tool
+  // result must not take over the screen on its own.
   useEffect(() => {
     if (!envelope || !sessionId || envelope.type === "pending") return;
     activeSessionId = sessionId;
     noteFile(sessionId, envelope);
-
-    // The model tells the user it has opened the file, so open it. Gated on
-    // `hydrated` so reopening a session does not yank the panel to an old
-    // artifact, and on `autoOpened` so a re-render never repeats it.
-    const key = `${sessionId}:${envelope.artifact_id}:${envelope.version}`;
-    if (!hydrated || autoOpened.has(key)) return;
-    autoOpened.add(key);
-    setSelected(sessionId, envelope);
-    (openCanvas ?? openCanvasPanel)();
   }, [sessionId, envelope?.artifact_id, envelope?.version]);
 
   if (!envelope) return null;
