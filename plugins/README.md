@@ -759,7 +759,7 @@ that returns null — so one run does not appear twice. Shadowing is the only wa
 to take a node off the flow: a slot entry can replace a keyed renderer, never
 filter one.
 
-### Code Mode runs
+### Code Mode runs are NOT covered, and cannot be
 
 `dsh-tool-workflow` records a run only when it is a top-level tool call:
 
@@ -768,28 +768,32 @@ const recordsRun = exec.parent === void 0
 if (recordsRun) recorder.start(parent.session, run)
 ```
 
-A workflow launched from inside a **Code Mode** program has a parent, so
-nothing is written and the transcript shows only the raw tool card — no tree,
-from this plugin or the stock one. The host half here records exactly those
-runs, under its own `workflow-view/*` event names so the two families never
-collide and a top-level run is never recorded twice. The fold reads both;
-their payloads are deliberately identical, so it only needs a suffix match.
+A workflow launched inside a **Code Mode** program has a parent, so no records
+exist and no tree can be drawn — by this plugin or the stock one. Run the
+workflow from a preset where `workflow` is a top-level tool (Standard mode) to
+see it.
 
-The engine emits everything needed on the context (`workflow/start`,
-`/agent-start`, `/agent-end`, `/end`). The one thing it does not carry is
-*which session* to write to — `WorkflowRunInfo` is `{id, meta}` — so the
-session comes from the `workflow` tool call in flight when the run starts. With
-two nested calls running at once there is no way to tell which is which, and
-putting a run in the wrong conversation is worse than not drawing it, so that
-case is skipped and logged.
+Recording those runs from a plugin **does not work on this build**, and the
+failure is severe rather than cosmetic:
 
-Records are log-only: they carry no `surfaceOp`, so nothing here ever reaches
-the model.
+- `KNOWN_SESSION_EVENT_TYPES` is generated from the harness's own repository,
+  and its docs state that downstream plugin events are outside that set "by
+  construction", with a registration surface "deferred until such a consumer
+  exists".
+- The persistence **read** path refuses to interpret a log containing a type
+  outside that set unless the event carries the `ignorable` envelope marker,
+  because an unrecognized required event may change how the rest of the log is
+  read.
+- `Session.append(type, data)` has **no parameter for that marker**. It exists
+  for logs written by a *newer harness*, not for plugins.
 
-**Inject nothing.** This half only registers context listeners, and `ctx.on`
-needs no service to exist first. Injecting `workflowEngine` looked tidier and
-took the whole boot down — the engine is not provided as a root service, so the
-row sat pending and `dsh` refused to start.
+So a plugin-written event type does not degrade to a missing drawing — it makes
+the whole session unreadable. This was tried, and the session it was tried in
+hung on "loading history" until it was deleted. `scripts/build.mjs` now fails
+the build if the host half contains an `.append(` call at all.
+
+Covering Code Mode needs a route that never touches the session log: the host
+holding live run state and the browser reading it over HTTP. Not built.
 
 ### The live clock
 
