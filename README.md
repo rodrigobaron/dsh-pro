@@ -12,7 +12,8 @@ upgradeable.
 
 ## Install
 
-Needs a working `dsh` install and Node.
+Needs Node. The harness itself comes from `npx`, so there is nothing to
+install first.
 
 ```bash
 git clone https://github.com/rodrigobaron/dsh-pro
@@ -20,14 +21,23 @@ cd dsh-pro
 ./install.sh
 ```
 
-Then restart `dsh web`, and force-refresh the browser once for the client-side
-plugins.
-
 The installer builds every plugin under `plugins/`, installs it into
 `~/.dsh/profiles/node_modules`, and regenerates the profile patch. It creates no
 agent preset and does not change which preset is default. It is idempotent — the
 patch is written whole on every run, so re-running never accumulates duplicate
 rows. Set `DSH_HOME` to target a different harness home.
+
+## Run
+
+```bash
+npx @deepseek-ai/dsh web
+```
+
+Serves at <http://127.0.0.1:3080>.
+
+After re-running the installer, restart that process and force-refresh the
+browser once — the client-side plugins are cached, so a plain reload serves the
+previous build.
 
 ## Plugins
 
