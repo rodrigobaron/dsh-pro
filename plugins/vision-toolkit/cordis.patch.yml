@@ -1,0 +1,7 @@
+# Vision toolkit: image Q&A, OCR, grounding, UI restoration, and pixel diff.
+# The host half publishes a Skill and mounts its tools only in agents that load
+# that skill; the browser half is loaded from the package's `./client` export
+# because the package declares `dsh.client`.
+- insert:
+    - id: vision-toolkit
+      name: '@my-dsh/vision-toolkit'

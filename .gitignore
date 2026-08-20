@@ -17,4 +17,13 @@ node_modules/
 plugins/context/lib/
 plugins/git-review/lib/
 plugins/archived-sessions/lib/
+
+# vision-toolkit: lib/ is bundled from upstream/, and the payload dirs are
+# copied out of upstream/ to sit beside it. upstream/ is the committed input.
+plugins/vision-toolkit/lib/
+plugins/vision-toolkit/assets/
+plugins/vision-toolkit/vendor/
+plugins/vision-toolkit/runtime/
+plugins/vision-toolkit/workers/
+plugins/vision-toolkit/patches/
 plugins/client-ui-file-canvas/lib/client.js

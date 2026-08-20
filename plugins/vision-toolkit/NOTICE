@@ -1,0 +1,31 @@
+This package repackages dsh-vision-toolkit by Anionex, used under the MIT
+License. The original project lives at:
+
+    https://github.com/Anionex/dsh-vision-toolkit
+
+and itself integrates agent-vision-toolkit:
+
+    https://github.com/Anionex/agent-vision-toolkit
+
+Upstream's build needs its full toolchain (a Python bootstrap, an upstream
+manifest check, a skill verification, and three tsc passes), so upstream/ holds
+its PUBLISHED output and scripts/build.mjs adapts it. Nothing about its
+behaviour is modified; all three adaptations are packaging concerns:
+
+  - `saxes`, `tar`, and `undici` are inlined into the host half. Upstream
+    imports them as runtime dependencies its own installer npm-installs into
+    the profile. This repository's installer only copies files, and the harness
+    profile provides none of the three, so an as-is copy fails to load.
+
+  - The browser bundle's `__ModuleLoader__` id is rewritten from
+    "@anionex/dsh-vision-toolkit" to "@my-dsh/vision-toolkit", because the web
+    boot manifest looks a bundle up by the installed package name.
+
+  - Only the payload the code actually reads at runtime is vendored — the skill,
+    the pinned upstream snapshot, the Python worker, the requirements lock, and
+    the patches. Upstream's README screenshots (roughly 4 MB) are not.
+
+`package.json`'s `dsh.visionToolkit` block is preserved verbatim, because the
+host half reads it back at load time to verify its pinned upstream checkout.
+
+The MIT License text, including its copyright notice, is in LICENSE.

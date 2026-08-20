@@ -1,0 +1,61 @@
+{
+  "name": "@my-dsh/vision-toolkit",
+  "description": "DeepSeek Harness-native integration for agent-vision-toolkit: image Q&A, OCR, grounding, UI restoration, pixel diff, Artifacts, and Web UI.",
+  "version": "0.1.35",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "assets",
+    "vendor",
+    "runtime",
+    "workers",
+    "patches",
+    "cordis.patch.yml",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "scripts": {
+    "build": "node scripts/build.mjs"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-api-remotes",
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-ui-conversation",
+        "@deepseek-ai/dsh-client-ui-tool",
+        "@deepseek-ai/dsh-client-ui-settings",
+        "@deepseek-ai/dsh-client-ui-input-trigger",
+        "@deepseek-ai/dsh-client-locale"
+      ],
+      "platform": "web"
+    },
+    "visionToolkit": {
+      "upstreamRepository": "https://github.com/Anionex/agent-vision-toolkit",
+      "upstreamVersion": "v0.1.0+snapshot.bc9803d",
+      "upstreamCommit": "bc9803d7d6300c864d17460ecbb33540b26638e0",
+      "upstreamSkillCommit": "77c24ad5b5d7a123119862893129f939307f1d3f"
+    }
+  },
+  "license": "MIT",
+  "author": "Anionex",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Anionex/dsh-vision-toolkit.git"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "saxes": "6.0.0",
+    "tar": "7.5.22",
+    "undici": "8.10.0"
+  }
+}
