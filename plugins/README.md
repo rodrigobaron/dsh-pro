@@ -18,10 +18,17 @@ Then restart the harness.
 | `client-ui-layout-wide` | a wide, resizable details column |
 | `context` | a context dashboard tab and the `/context` command |
 | `git-review` | a Git tab: review the diff, stage, discard, commit, and push |
+| `archived-sessions` | a session manager in Settings: browse, archive, and delete conversations |
 
 ## Adding a plugin
 
 Add a directory. The installer discovers it — there is no list to update.
+
+Most plugins here are built from `src/`. One (`archived-sessions`) is
+repackaged from an upstream release that ships no sources: its published output
+sits in `vendor/` and its build script adapts rather than compiles it. Either
+shape is just "a directory with a build script" as far as the installer is
+concerned.
 
 A plugin directory holds a `package.json` and may contribute:
 
@@ -114,6 +121,12 @@ Staging is per file. Hunk-level staging is not implemented.
 
 ## Licensing
 
-`context/` is a fork of [dsh-context](https://github.com/bowenliang123/dsh-context)
-by bowenliang123, used under the Apache License 2.0 — see `context/LICENSE` and
-`context/NOTICE`. Everything else is MIT.
+Two plugins here are derived from other people's work. Each keeps its upstream
+LICENSE, and a NOTICE recording exactly what was changed:
+
+| Plugin | Upstream | License |
+| --- | --- | --- |
+| `context` | [bowenliang123/dsh-context](https://github.com/bowenliang123/dsh-context) | Apache-2.0 |
+| `archived-sessions` | [Zephyr-vibe/dsh-archived-sessions](https://github.com/Zephyr-vibe/dsh-archived-sessions) | MIT |
+
+Everything else in this directory is MIT and original to this repository.
