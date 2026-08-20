@@ -24,7 +24,6 @@ plugins/notification/lib/
 plugins/rewind/lib/
 plugins/rewind-picker/lib/
 plugins/routines/lib/
-plugins/workflow/lib/
 
 # vision-toolkit: lib/ is bundled from upstream/, and the payload dirs are
 # copied out of upstream/ to sit beside it. upstream/ is the committed input.
