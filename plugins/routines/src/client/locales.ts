@@ -25,6 +25,8 @@ export const en = {
   'preset.help': 'Which tools and prompt sections the run gets.',
   'required': 'Pick a project, a preset, and a model before creating a routine.',
   'model': 'Model',
+  'model.suffix.default': '{label} (deployment default)',
+  'model.help': 'The deployment default is listed first and is the route already configured with a key. Another provider only works if its key is stored on the Models page.',
   'save': 'Create routine',
   'saving': 'Creating…',
   'cancel': 'Cancel',

@@ -683,6 +683,14 @@ Two things the raw data needed before it was usable:
   show those either, it carries its own labels. This select matches them, so it
   says what the rest of the GUI says. Anything not built-in keeps the name its
   author chose.
+- **The catalog cannot say which models work.** Every provider route
+  enumerates its models whether or not a key is stored for it, and `failures`
+  stays empty because enumeration itself succeeds. A routine pointed at a
+  keyless provider therefore creates cleanly and then fails at *every* fire
+  with `no API key for provider route "..."`. Nothing in the payload
+  distinguishes them, so the deployment default is listed first and labelled —
+  it is by construction the configured route — and the help text says the rest
+  need their key on the Models page.
 - **The model catalog contains duplicates.** Other plugins register their own
   provider routes into it — vision-toolkit mirrors every provider as
   `vision-toolkit-<id>` with the same display name and models — so each model

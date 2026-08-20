@@ -163,18 +163,33 @@ export function makeSection(fallbackT: Translate): (props: SectionProps) => Reac
     const modelChoices = React.useMemo(() => {
       const seen = new Set<string>()
       const out: { value: string; label: string }[] = []
-      for (const group of models.groups) {
+      // The deployment default leads. Every provider route enumerates its
+      // models whether or not a key is stored for it, so the catalog cannot say
+      // which ones actually work — and a routine pointed at a keyless provider
+      // fails at every fire with "no API key for provider route". The default
+      // is by construction the configured one, so it is the safe first pick;
+      // the help text says the rest need their key on the Models page.
+      const groups = [...models.groups].sort((a, b) =>
+        Number(b.id === models.default?.provider) - Number(a.id === models.default?.provider))
+      for (const group of groups) {
         for (const model of group.models) {
-          const label = `${group.name} · ${model.name}`
-          if (seen.has(label)) continue
-          seen.add(label)
+          const base = `${group.name} · ${model.name}`
+          if (seen.has(base)) continue
+          seen.add(base)
+          const isDefault = group.id === models.default?.provider && model.id === models.default?.model
           // provider:model — the wire shape the host expects, kept whole in the
           // option value so nothing has to re-parse a display label.
-          out.push({ value: `${group.id}:${model.id}`, label })
+          out.push({
+            value: `${group.id}:${model.id}`,
+            label: isDefault ? t('model.suffix.default', { label: base }) : base,
+          })
         }
       }
-      return out
-    }, [models])
+      // The default may not be the first model of its own group.
+      return out.sort((a, b) =>
+        Number(b.value === `${models.default?.provider}:${models.default?.model}`)
+        - Number(a.value === `${models.default?.provider}:${models.default?.model}`))
+    }, [models, t])
 
     const complete = draft.title.trim() !== '' && draft.prompt.trim() !== '' && draft.cron.trim() !== ''
       && draft.workdir !== '' && draft.presetId !== '' && draft.model !== ''
@@ -196,7 +211,7 @@ export function makeSection(fallbackT: Translate): (props: SectionProps) => Reac
         presets.map(p => ({ value: p.id, label: BUILT_IN_PRESETS[p.id] ?? p.name })),
         'preset.help'),
       select('model', draft.model, v => setDraft(d => ({ ...d, model: v })),
-        modelChoices),
+        modelChoices, 'model.help'),
       complete || draft.title.trim() === '' ? null
         : h('span', { className: 'dsh_rt_help' }, t('required')),
       h('div', { className: 'dsh_rt_formActions' },
