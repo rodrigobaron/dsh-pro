@@ -29,6 +29,7 @@ preset is default.
 | `rewind` | a rewind button on every user message: drop it and everything after |
 | `rewind-picker` | the `/rewind` command: pick the message to rewind to from a list |
 | `routines` | scheduled agent routines: a cron engine that fires real sessions |
+| `workflow` | a workflow progress tree inline in the transcript, with live durations |
 
 ## Adding a plugin
 
@@ -731,6 +732,48 @@ against the returned record rather than the status code.
 answers `200`. Pausing a routine is `scheduleEnabled`, not `enabled`; sending
 the wrong key looks like a working request that changes nothing, which is
 exactly how it presented.
+
+## Workflow runs
+
+A progress tree for workflow runs, inline in the transcript: phases group their
+members, each member carries a status glyph, its label, and how long it took —
+or how long it has been going, ticking once a second while the run is live.
+
+### Why a second node
+
+The harness already reconstructs runs as chat nodes
+(`dsh-client-ui-workflow-run`), and they are already inline — there was no
+sidebar to move them out of. What was missing is what the node *says*. Its own
+README puts it plainly: it shows "run, phase, member identity, and status
+only", and "scripts, outputs, errors, logs, usage … remain outside this
+surface".
+
+Two of those matter while a run is in flight, and neither is answerable from
+that node's data: **how far along is it**, and **what is slow**. Its view keeps
+no timestamps at all. So this folds the same four `tool-workflow/*` events
+again and keeps `event.time`, which is where every duration here comes from,
+and surfaces a failed member's reason next to it instead of only its status.
+
+The stock node is then suppressed — shadowed at `priority: -1` with a renderer
+that returns null — so one run does not appear twice. Shadowing is the only way
+to take a node off the flow: a slot entry can replace a keyed renderer, never
+filter one.
+
+### The live clock
+
+Nothing re-renders a chat node between session events, so elapsed time would
+sit frozen at whatever it was when the last member started. The node runs its
+own one-second interval while the run is open and drops it the moment the run
+settles.
+
+### Fold, not rendering, is where this breaks
+
+A mis-paired `agent-end` attributes a failure to the wrong member; a `run-end`
+arriving with members still open leaves them spinning forever. Both look like
+rendering bugs and are arithmetic, so the fold is pure and unit-tested —
+14 cases covering pairing, duplicate starts, unknown events, interruption at
+run-end, phase grouping, and cancellation
+(`npm run test --workspace=@my-dsh/workflow`).
 
 ## Language
 
