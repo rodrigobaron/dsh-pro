@@ -61,7 +61,7 @@ function sessionCwd(ctx: ClientCtx, sessionId: string | undefined): string | und
 }
 
 function apply(ctx: ClientCtx): void {
-  ctx.effect(() => ctx.locale.register(NS, { en: DICT_EN, zh: DICT_EN }), 'git-review: dictionaries')
+  ctx.effect(() => ctx.locale.register(NS, { en: DICT_EN }), 'git-review: dictionaries')
   const t = ctx.locale.bind(NS)
 
   ctx.effect(() => {
