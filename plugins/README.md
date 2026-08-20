@@ -774,8 +774,18 @@ as readily as from the composer. The browser half only adds the `/` menu entry
 The methodology lives in the skill, not in the injected message, so changing it
 reaches every invocation.
 
-Two `deep-research` entries appear under `/`, and both are wanted: the harness
-lists the **skill** from its own catalog, and this plugin adds the **command**.
+The skill is registered **model-facing only**:
+
+```ts
+invocation: { modelInvocable: true, userInvocable: false }
+```
+
+Omitting `invocation` permits both surfaces, which put a second `deep-research`
+in the `/` menu beside the command — two entries for one feature, and the skill
+one only loads the instructions without a topic. The harness ships no
+deep-research skill of its own; both entries came from this plugin. The model
+still loads the skill by name; the human entry point is the command.
+
 Picking the command returns `{ text: '/deep-research ' }` — a `PickOutcome`
 that replaces the trigger token. Returning `undefined` reads as "not handled",
 which is why the entry was visible but unselectable at first. The trailing

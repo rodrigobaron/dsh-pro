@@ -40,6 +40,12 @@ export function apply(ctx: Context): void {
     whenToUse:
       'Use for a question that needs more than one or two searches — where the answer depends on '
       + 'several angles, on what changed recently, or on whether sources actually agree.',
+    // Model-facing only. Omitting `invocation` permits BOTH surfaces, which put
+    // a second `deep-research` in the `/` menu beside this plugin's own command
+    // — two entries for one feature, one of which only loads the instructions
+    // without the topic. The model still loads it by name; the human entry
+    // point is the command.
+    invocation: { modelInvocable: true, userInvocable: false },
     content: SKILL_BODY,
   }), 'deep-research: skill')
 
