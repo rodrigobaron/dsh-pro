@@ -15,7 +15,9 @@
 // Extensibility mirrors the panel it replaces: the canvas declares child slots
 // (`canvas.renderer` keyed by envelope type, `canvas.chrome` for toolbar items)
 // so another plugin can teach it a new file type without touching this file.
-import { CodeBlock, MarkdownText } from "@deepseek-ai/dsh-client-ui-primitives";
+// The Icon* members drive the canvas header's icon buttons. One line, because
+// build.mjs rewrites imports by line and does not parse a multi-line form.
+import { CodeBlock, MarkdownText, IconCloseOutline16, IconCodeOutline16, IconDownloadOutline16 } from "@deepseek-ai/dsh-client-ui-primitives";
 import { createElement as h, useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 const name = "@my-dsh/client-ui-file-canvas";
@@ -46,6 +48,37 @@ let activeSessionId = null;
 let layoutService = null;
 
 /** Open the details column, reporting rather than swallowing a wiring failure. */
+// The reference artifact canvas's icon-button geometry: a 28px square with no
+// chrome until hover, so a row of them reads as one control strip rather than
+// as competing buttons.
+const ICON_BUTTON = {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  width: "28px",
+  height: "28px",
+  padding: "0",
+  border: "none",
+  background: "transparent",
+  borderRadius: "6px",
+  cursor: "pointer",
+  color: "var(--dsw-alias-label-secondary)",
+  textDecoration: "none",
+};
+
+/**
+ * One header control. `Icon` may be undefined on a harness whose primitives
+ * predate it, in which case `fallback` is drawn as text rather than the button
+ * disappearing.
+ */
+function IconButton({ Icon, label, fallback, tag = "button", ...rest }) {
+  return h(
+    tag,
+    { ...rest, style: { ...ICON_BUTTON, ...(rest.style ?? {}) }, title: label, "aria-label": label },
+    Icon ? h(Icon, null) : fallback,
+  );
+}
+
 function openCanvasPanel() {
   try {
     layoutService?.openDetails();
@@ -414,17 +447,32 @@ function FileCanvas(props) {
         : null,
       h("span", { style: { fontSize: "11px", opacity: 0.6 } }, formatBytes(envelope.size)),
       hasSource(envelope)
-        ? h(
-            "button",
-            {
-              onClick: () => setView(showSource ? "preview" : "source"),
-              title: showSource ? "Show preview" : "Show source",
-            },
-            showSource ? "Preview" : "Source",
-          )
+        ? h(IconButton, {
+            Icon: IconCodeOutline16,
+            fallback: showSource ? "Preview" : "Source",
+            label: showSource ? "Show preview" : "Show source",
+            onClick: () => setView(showSource ? "preview" : "source"),
+            // Pressed state, so a toggle reads as a toggle rather than as a
+            // button that does nothing visible.
+            style: showSource
+              ? { background: "var(--dsw-alias-bg-layer-2)", color: "var(--dsw-alias-label-primary)" }
+              : {},
+          })
+        : null,
+      envelope.url
+        ? h(IconButton, {
+            tag: "a",
+            Icon: IconDownloadOutline16,
+            fallback: "Download",
+            label: "Download",
+            href: envelope.url,
+            download: envelope.title,
+          })
         : null,
       renderSlot?.("canvas.chrome", owner) ?? null,
-      closeDetails ? h("button", { onClick: closeDetails, title: "Close" }, "×") : null,
+      closeDetails
+        ? h(IconButton, { Icon: IconCloseOutline16, fallback: "\u00d7", label: "Close", onClick: closeDetails })
+        : null,
     ),
     // ── body ──
     h("div", { style: { flex: 1, minHeight: 0 } }, body),
@@ -508,6 +556,19 @@ function ShowFileToolRow(props) {
           onClick: () => {
             if (sessionId) setSelected(sessionId, envelope);
             (openCanvas ?? openCanvasPanel)();
+          },
+          // The default browser button is the one thing on this card that does
+          // not look like the rest of the GUI, and it is the card's only action.
+          style: {
+            font: "inherit",
+            fontSize: "12px",
+            padding: "4px 10px",
+            borderRadius: "6px",
+            border: "1px solid var(--dsw-alias-border-l1)",
+            background: "var(--dsw-alias-bg-layer-2)",
+            color: "var(--dsw-alias-label-primary)",
+            cursor: "pointer",
+            whiteSpace: "nowrap",
           },
         },
         "Open artifact",

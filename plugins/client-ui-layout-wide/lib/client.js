@@ -304,7 +304,10 @@ window.__ModuleLoader__.load({
 						d.narrowExpanded = false;
 					},
 					openDetails: (d) => {
-						if (d.details === 0) d.details = Math.max(420, Math.round(d.viewport * 0.35));
+						// 0.45, not the stock 0.35: the canvas renders real documents and
+						// pages, and a third of a window is not enough to read one in.
+						// The clamps are unchanged, so a drag still overrides this.
+						if (d.details === 0) d.details = Math.max(420, Math.round(d.viewport * 0.45));
 					},
 					setViewport: (d, viewport) => {
 						d.viewport = viewport;
