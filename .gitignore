@@ -16,4 +16,5 @@ node_modules/
 # client-ui-layout-wide/lib/ is the fork itself, not generated.
 plugins/context/lib/
 plugins/git-review/lib/
+plugins/archived-sessions/lib/
 plugins/client-ui-file-canvas/lib/client.js

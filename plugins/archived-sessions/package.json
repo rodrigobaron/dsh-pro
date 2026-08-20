@@ -1,0 +1,41 @@
+{
+  "name": "@my-dsh/archived-sessions",
+  "description": "Session manager in Settings: browse all conversations and archived sessions, inspect per-session disk usage and lineage, and permanently delete.",
+  "version": "0.1.4",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "cordis.patch.yml",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "scripts": {
+    "build": "node scripts/build.mjs"
+  },
+  "dsh": {
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-slots"
+      ],
+      "platform": "web"
+    }
+  },
+  "license": "MIT",
+  "author": "Zephyr-vibe",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Zephyr-vibe/dsh-archived-sessions.git"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "schemastery": "^3.18.0"
+  }
+}

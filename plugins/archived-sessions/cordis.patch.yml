@@ -1,0 +1,6 @@
+# Session manager in Settings. The host half serves the /archived/api routes;
+# the browser half is loaded from the package's `./client` export because the
+# package declares `dsh.client`.
+- insert:
+    - id: archived-sessions
+      name: '@my-dsh/archived-sessions'
