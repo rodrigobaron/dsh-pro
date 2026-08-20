@@ -6,6 +6,9 @@
   "workspaces": [
     "plugins/*"
   ],
+  "dsh": {
+    "harness": "0.1.0-rc.7"
+  },
   "scripts": {
     "build": "npm run build --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",

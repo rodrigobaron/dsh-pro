@@ -40,6 +40,16 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund
 
+      # typecheck links against the harness that is actually installed rather
+      # than a published version, because the published packages cannot be
+      # installed together: rc.7 peers ^0.1.0-rc.7, npm resolves that to rc.8,
+      # and rc.8 peers ^0.1.0-rc.8. A clean runner has no harness at all, so
+      # link-harness.mjs throws and every release would die here. Populating
+      # the npx cache gives it the fallback it looks for, pinned to the version
+      # this repository targets so CI checks what a user actually runs.
+      - name: Install the harness to type-check against
+        run: npx -y "@deepseek-ai/dsh@$(node -p "require('./package.json').dsh.harness")" --version
+
       - name: Typecheck
         run: npm run typecheck
 
