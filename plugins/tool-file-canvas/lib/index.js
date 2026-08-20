@@ -30,41 +30,39 @@ const TOOL_NAME = "show_file";
 const SKILL_BODY = [
   "# Showing files to the user",
   "",
-  `Use the \`${TOOL_NAME}\` tool to put a workspace file in front of the user as an artifact:`,
-  "source code, Markdown, HTML, images, PDFs, or data files. It renders the file with",
-  "syntax highlighting or a real preview in a side panel.",
+  `The \`${TOOL_NAME}\` tool is always available — this skill is the longer explanation,`,
+  "not a prerequisite. Its essentials are already in the tool description; read on when",
+  "you want the reasoning behind them.",
   "",
-  "The tool does not open the panel. It puts a card in the transcript that the user",
-  "clicks to view the file, so say the artifact is ready — never that you have opened,",
-  "displayed, or shown it on screen.",
+  "## Why a card and not an open panel",
   "",
-  "## What to show",
+  "The tool places a card in the transcript. Opening the side panel is the user's",
+  "gesture, not yours, because a panel that opens itself replaces whatever they were",
+  "already reading. So the honest sentence is that the artifact is ready — claiming you",
+  "opened or displayed it describes something that did not happen, and the user sees an",
+  "unopened card while being told otherwise.",
   "",
-  "Use it to present the DELIVERABLE of your work: when a task produces or changes a",
-  "file the user should look at, end by showing that file. That is the point of the",
-  "tool — the user sees the outcome instead of reading a description of it.",
+  "## Why one at a time",
   "",
-  "## Show one thing",
+  "The panel holds a single artifact, so each call discards what the user is currently",
+  "looking at. Showing five files in sequence means showing four files to nobody. Pick",
+  "the one they would open first, name the rest in prose, and show another when the",
+  "conversation moves to it.",
   "",
-  "The panel holds a single artifact at a time, so each call replaces the last. Show the",
-  "one file that matters most at this moment, not every file you touched. If the work",
-  "produced several, pick the one the user would open first and mention the rest in",
-  "prose; show another only when the conversation moves on to it.",
+  "## Why it is not read",
   "",
-  "## show_file is not read",
-  "",
-  "`read` pulls a file into YOUR context so you can reason about it. `show_file` puts the",
-  "file in front of the USER and never enters your context. Use `show_file` when the user",
-  "wants to LOOK at a file, and `read` when you need its contents. Neither implies the other,",
-  "and needing both is normal.",
+  "`read` spends YOUR context to give you a file's contents. `show_file` spends none and",
+  "gives the USER a rendered view. They answer different questions — 'what does this say'",
+  "versus 'let me look at this' — so neither implies the other, and a task often wants",
+  "both.",
   "",
   "## Usage",
   "",
-  `- \`${TOOL_NAME}({ path })\` — the path exactly as the user wrote it, relative to the workspace root.`,
-  "- Pass `title` to override the heading; it defaults to the file name.",
-  "- It never modifies anything, so it is always safe to call.",
-  "- Prefer it over pasting a file's contents into your reply: the user gets a better view and",
-  "  it does not spend context on the file body.",
+  `- \`${TOOL_NAME}({ path })\` — the path as the user wrote it, relative to the workspace root.`,
+  "- `title` overrides the heading; it defaults to the file name.",
+  "- Read-only, so it is always safe to call.",
+  "- Prefer it to pasting a file into your reply: a better view for them, no context spent",
+  "  by you.",
 ].join("\n");
 
 function apply(ctx) {
@@ -92,8 +90,23 @@ function apply(ctx) {
 
   const definition = defineTool({
     name: TOOL_NAME,
-    description:
-      "Show a workspace file to the user as an artifact: source code, Markdown, HTML, images, PDFs, or data files. Read-only.",
+    description: [
+      "Show a workspace file to the user as a rendered artifact: source code, Markdown, HTML,",
+      "images, PDFs, or data files. Read-only.",
+      "",
+      "This is how the user LOOKS at a file. It is not `read`: `read` pulls a file into your",
+      "context so you can reason about it, while this puts the file in front of the user and",
+      "never enters your context. Needing both is normal.",
+      "",
+      "Use it to present the DELIVERABLE of your work — when a task produces or changes a file",
+      "the user should see, end by showing that file rather than describing it.",
+      "",
+      "It does NOT open the panel: it places a card in the transcript that the user clicks. Say",
+      "the artifact is ready, never that you have opened, displayed, or shown it on screen.",
+      "",
+      "The panel holds ONE artifact at a time and each call replaces the last, so show the single",
+      "file that matters most right now and mention the rest in prose.",
+    ].join("\n"),
     parameters: {
       path: {
         type: "string",
@@ -155,19 +168,24 @@ function apply(ctx) {
     },
   });
 
-  // ── progressive exposure ──────────────────────────────────────────────────
-  // The tool is registered into an agent ONLY once that agent loads the skill.
+  // ── exposure ──────────────────────────────────────────────────────────────
+  // Every agent gets the tool at creation. Showing the user a file is core GUI
+  // behaviour rather than a specialist capability, and gating it behind the
+  // skill meant an agent that never thought to load the skill could not do it
+  // at all — which is exactly what happened.
   //
-  // The first attempt did the opposite — register into every agent, then hide
-  // it with `agent.ctx.tools.restrict({ deny: ['show_file'] })`. That throws:
-  // restrict() filters the GLOBAL tool surface, and an agent-scoped
-  // registration is not part of it ("names unknown global tool"). The throw
-  // happened inside the agent/created handler on every agent, which is what
-  // made the UI flash.
+  // The rules that used to live only in the skill (present the deliverable, one
+  // artifact at a time, the card is not an opened panel) are in the tool
+  // description now, because a model that never loads the skill still reads
+  // that. The skill remains for the longer explanation.
   //
-  // Registering on demand needs no restriction at all, so there is nothing to
-  // reject. (The vision toolkit restricts a genuinely global activation tool,
-  // which is why the same call works there.)
+  // Registering is safe here; RESTRICTING is not. An early version registered
+  // into every agent and then hid the tool with
+  // `agent.ctx.tools.restrict({ deny: ['show_file'] })`, which throws — restrict
+  // filters the GLOBAL tool surface and an agent-scoped registration is not
+  // part of it ("names unknown global tool"). That throw fired inside
+  // agent/created for every agent and made the UI flash. Nothing here restricts
+  // anything, so there is nothing to reject.
   /** agent -> disposers for the tools registered into it. */
   const mounted = new Map();
 
@@ -194,6 +212,16 @@ function apply(ctx) {
   ctx.effect(() => {
     const offs = [
       ctx.on("agent/disposed", ({ agent }) => detach(agent)),
+      ctx.on("agent/created", ({ agent }) => {
+        try {
+          revealFor(agent);
+        } catch {
+          // A registry that refuses leaves this agent without the tool; it must
+          // never take down agent creation.
+        }
+      }),
+      // Kept as a backstop for an agent created before this listener attached.
+      // revealFor is idempotent, so a second call is a no-op.
       ctx.on("tools/result", (exec, result) => {
         if (result?.isError !== false) return;
         if (exec?.name !== "skill" || exec.agent === undefined) return;
@@ -212,7 +240,7 @@ function apply(ctx) {
       for (const off of offs) off();
       for (const agent of [...mounted.keys()]) detach(agent);
     };
-  }, "file-canvas: reveal show_file when the skill loads");
+  }, "file-canvas: mount show_file for every agent");
 }
 
 export { apply, inject, name };
