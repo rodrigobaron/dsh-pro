@@ -565,6 +565,21 @@ snapshot change and drops the inline styles. On mount the client asks the host
 resurrect them. Only rewind's own markers count — compaction shadows surface
 nodes too, and its summaries are meant to stay visible.
 
+### The two bundles have to talk
+
+The button and the picker are separate bundles that share only the route, so a
+rewind from the button was invisible to the picker: its hidden set stayed stale
+until a reload re-queried it, which is why the button used to need an F5 and
+the command did not. The button's bundle now dispatches
+`my-dsh:rewound` on the window when a rewind commits, and the picker re-reads
+the state. A DOM event is the smallest thing that crosses the gap without a
+shared module.
+
+The host reports the same state two ways for two consumers: **ids**, which the
+transcript hiding keys rows by, and **seqs**, which the picker uses to drop
+already-rewound messages from its list — offering one again could only produce
+a refusal, since it is no longer a surface node.
+
 ### Dialog layout
 
 The overlay slot renders inside the composer's container, so an absolutely

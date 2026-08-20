@@ -24,14 +24,21 @@ export function nodeText(node: ConversationNode): string {
  * event and every later one — so no turn lookup is needed.
  *
  * @param nodes - the conversation snapshot's nodes.
+ * @param rewoundSeqs - seqs already removed by an earlier rewind, skipped.
  * @returns one entry per user message that carries a usable boundary.
  */
-export function rewindPoints(nodes: readonly ConversationNode[] | undefined): { seq: number; text: string; time?: number }[] {
+export function rewindPoints(
+  nodes: readonly ConversationNode[] | undefined,
+  rewoundSeqs: ReadonlySet<number> = new Set(),
+): { seq: number; text: string; time?: number }[] {
   const points: { seq: number; text: string; time?: number }[] = []
   for (const node of nodes ?? []) {
     if (node.kind !== 'user') continue
     const seq = node.seq
     if (typeof seq !== 'number') continue
+    // Already rewound: it is no longer a surface node, so offering it again
+    // could only produce a refusal.
+    if (rewoundSeqs.has(seq)) continue
     points.push({ seq, text: nodeText(node), time: node.time })
   }
   return points
@@ -43,7 +50,7 @@ export function rewindPoints(nodes: readonly ConversationNode[] | undefined): { 
  * Asked on mount so a page reload does not resurrect hidden messages.
  *
  * @param sessionId - the session to query.
- * @returns the rewound message ids, or an empty list when the query fails.
+ * @returns the rewound ids and seqs, both empty when the query fails.
  */
 /**
  * POST one rewind request.
@@ -55,9 +62,16 @@ export function rewindPoints(nodes: readonly ConversationNode[] | undefined): { 
  * @param boundary - the seq of the user message to rewind to.
  * @returns the host envelope, or a synthesized transport error.
  */
-export async function requestRewindState(sessionId: string): Promise<readonly string[]> {
+export async function requestRewindState(sessionId: string): Promise<RewoundState> {
   const body = await postRewind({ sessionId, query: true })
-  return body.ok === true ? (body.value as { rewound?: readonly string[] } | undefined)?.rewound ?? [] : []
+  if (body.ok !== true) return { ids: [], seqs: [] }
+  return { ids: body.value?.ids ?? [], seqs: body.value?.seqs ?? [] }
+}
+
+/** What a session's rewinds have removed: ids for the transcript, seqs for the picker. */
+export interface RewoundState {
+  readonly ids: readonly string[]
+  readonly seqs: readonly number[]
 }
 
 /** POST one request to the rewind route, settling to its envelope. */

@@ -12,7 +12,7 @@
  * never becomes model-visible.
  */
 import { applyHiding } from './hide.ts'
-import { requestRewindState } from './api.ts'
+import { requestRewindState, type RewoundState } from './api.ts'
 import { makePicker } from './Picker.tsx'
 import { en, NS } from './locales.ts'
 import { pickerStoreOf } from './store.ts'
@@ -68,26 +68,39 @@ function apply(ctx: ClientCtx): void {
   // events and keeps rendering the rewound exchange. There is no supported
   // filter for that, so hide.ts walks the chat flow. See its module comment for
   // why this is a DOM pass rather than a stylesheet.
-  const rewoundBySession = new Map<string, ReadonlySet<string>>()
+  const rewoundBySession = new Map<string, RewoundState>()
   let hidingSession: string | undefined
 
   /** Re-apply hiding for the session on screen. */
   function refreshHiding(sessionId: string): void {
-    applyHiding(rewoundBySession.get(sessionId) ?? new Set())
+    applyHiding(new Set(rewoundBySession.get(sessionId)?.ids ?? []))
   }
 
   /** Ask the host what is rewound, then hide it. */
   async function loadHiding(sessionId: string): Promise<void> {
-    const ids = await requestRewindState(sessionId)
-    rewoundBySession.set(sessionId, new Set(ids))
+    rewoundBySession.set(sessionId, await requestRewindState(sessionId))
     refreshHiding(sessionId)
   }
 
-  /** Called by the picker once a rewind commits, with the fresh id set. */
-  function noteRewound(sessionId: string, ids: readonly string[]): void {
-    rewoundBySession.set(sessionId, new Set(ids))
+  /** Called by the picker once a rewind commits, with the fresh state. */
+  function noteRewound(sessionId: string, state: RewoundState): void {
+    rewoundBySession.set(sessionId, state)
     refreshHiding(sessionId)
   }
+
+  // The rewind BUTTON lives in the companion package's bundle and posts the
+  // route directly, so nothing here would know it happened — the hidden set
+  // stayed stale until a reload re-queried it. That bundle now announces a
+  // committed rewind on the window, and this re-reads the state.
+  ctx.effect(() => {
+    if (typeof window === 'undefined') return () => {}
+    const onRewound = (event: Event): void => {
+      const sessionId = (event as CustomEvent<{ sessionId?: unknown }>).detail?.sessionId
+      if (typeof sessionId === 'string' && sessionId !== '') void loadHiding(sessionId)
+    }
+    window.addEventListener('my-dsh:rewound', onRewound)
+    return () => { window.removeEventListener('my-dsh:rewound', onRewound) }
+  }, 'rewind-picker: follow rewinds from the message buttons')
 
   /**
    * Keep hiding applied as the flow re-renders.
@@ -118,6 +131,7 @@ function apply(ctx: ClientCtx): void {
       else refreshHiding(sessionId)
     },
     onRewound: noteRewound,
+    rewoundSeqs: (sessionId) => new Set(rewoundBySession.get(sessionId)?.seqs ?? []),
   })
   ctx.slots.inject('conversation.input.overlay', () => ctx.slots.register(
     {

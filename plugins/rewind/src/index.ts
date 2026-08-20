@@ -24,12 +24,12 @@
  */
 import { deriveEventMessage, isAppendSurfaceEvent } from '@deepseek-ai/dsh-session'
 import { hasApiRemoteSubagentOwner } from '@deepseek-ai/dsh-api-remotes'
-import { commitRewind, rewoundMessageIds, type RewindSession } from './surface.ts'
+import { commitRewind, rewoundState, type RewindSession } from './surface.ts'
 
 // Re-exported so the rewind planning is testable without a live session: it is
 // pure, and it is the part where an off-by-one silently shadows the wrong
 // range.
-export { commitRewind, markerText, planRewind, rewoundMessageIds } from './surface.ts'
+export { commitRewind, markerText, planRewind, rewoundState } from './surface.ts'
 export type { RewindPlan, RewindRefusal, RewindSession } from './surface.ts'
 
 /** Cordis plugin name. */
@@ -95,10 +95,10 @@ function resolveBoundary(
  * The rewound user-message ids for one session.
  *
  * @param session - the live session.
- * @returns durable message ids the browser half hides, oldest first.
+ * @returns the ids the transcript hides and the seqs the picker skips.
  */
-function shadowedIds(session: { readonly events: readonly { seq: number; type: string }[] }): string[] {
-  return rewoundMessageIds(session.events as never, (event) => {
+function shadowedIds(session: { readonly events: readonly { seq: number; type: string }[] }): { ids: string[]; seqs: number[] } {
+  return rewoundState(session.events as never, (event) => {
     const message = deriveEventMessage(event as never)
     return message === null ? null : ((message as { id?: string }).id ?? null)
   })
@@ -150,7 +150,7 @@ export function apply(ctx: {
       // A query, not a rewind: the browser half asks for the current state on
       // mount so a page reload does not resurrect hidden messages.
       if (payload.query === true) {
-        sendJson(res, 200, { ok: true, value: { rewound: shadowedIds(agent.session as never) } })
+        sendJson(res, 200, { ok: true, value: shadowedIds(agent.session as never) })
         return
       }
       const boundary = resolveBoundary(agent.session as never, payload)
@@ -161,7 +161,7 @@ export function apply(ctx: {
       try {
         const result = commitRewind(agent.session as unknown as RewindSession, boundary)
         await sessions.flush(agent.session)
-        sendJson(res, 200, { ok: true, value: { boundary, seq: result.seq, shadowed: result.shadowed, rewound: shadowedIds(agent.session as never) } })
+        sendJson(res, 200, { ok: true, value: { boundary, seq: result.seq, shadowed: result.shadowed, ...shadowedIds(agent.session as never) } })
       } catch (error) {
         sendJson(res, 422, errorBody('rewind-rejected', error instanceof Error ? error.message : String(error), { sessionId, boundary }))
       }

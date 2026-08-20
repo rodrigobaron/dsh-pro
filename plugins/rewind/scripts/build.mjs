@@ -115,6 +115,23 @@ client = rewrite(
   'busy message',
 )
 
+// Announce a committed rewind, so the companion picker package can hide the
+// messages that just left the model's history.
+//
+// The two browser halves are separate bundles that share only the route. This
+// one posts directly, so without a signal the picker's hidden-message set goes
+// stale until a page reload re-queries it — which is exactly what a rewind from
+// the button looked like: correct after F5, nothing before it. A DOM event is
+// the smallest thing that crosses the gap and needs no shared module.
+client = rewrite(
+  client,
+  'if (result?.ok === true) restoreDraft(sessionId, text);',
+  'if (result?.ok === true) {\n\t\t\t\t\t\t\trestoreDraft(sessionId, text);\n'
+  + '\t\t\t\t\t\t\ttry { window.dispatchEvent(new CustomEvent("my-dsh:rewound", { detail: { sessionId } })); } catch {}\n'
+  + '\t\t\t\t\t\t}',
+  'rewind-committed announcement',
+)
+
 await writeFile(join(ROOT, 'lib', 'client.js'), client)
 
 // ── smoke checks ─────────────────────────────────────────────────────────────

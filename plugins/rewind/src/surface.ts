@@ -26,7 +26,7 @@ declare module '@deepseek-ai/dsh-llm' {
 }
 
 /**
- * The user messages a set of rewinds has shadowed, as durable message ids.
+ * The user messages a set of rewinds has shadowed.
  *
  * The transcript is projected from append-origin events, so it keeps showing
  * every rewound message — the harness documents this deliberately, since
@@ -39,12 +39,12 @@ declare module '@deepseek-ai/dsh-llm' {
  *
  * @param events - the complete session log.
  * @param deriveId - resolves one event to its durable message id.
- * @returns the shadowed user-message ids, oldest first.
+ * @returns the shadowed user messages as durable ids and log seqs, oldest first.
  */
-export function rewoundMessageIds(
+export function rewoundState(
   events: readonly { seq: number; type: string; data?: unknown; sourceEventSeqs?: readonly number[] }[],
   deriveId: (event: { seq: number; type: string; data?: unknown }) => string | null,
-): string[] {
+): { ids: string[]; seqs: number[] } {
   const shadowed = new Set<number>()
   for (const event of events) {
     if (event.type !== 'user/message') continue
@@ -52,14 +52,19 @@ export function rewoundMessageIds(
     if (source?.kind !== 'rewind') continue
     for (const seq of event.sourceEventSeqs ?? []) shadowed.add(seq)
   }
-  if (shadowed.size === 0) return []
+  if (shadowed.size === 0) return { ids: [], seqs: [] }
   const ids: string[] = []
+  const seqs: number[] = []
   for (const event of events) {
     if (!shadowed.has(event.seq) || event.type !== 'user/message') continue
+    // Seqs drive the picker, which must not offer a message that is already
+    // gone: rewinding it again can only be refused, since it is no longer a
+    // surface node. Ids drive the transcript hiding, which keys rows by id.
+    seqs.push(event.seq)
     const id = deriveId(event)
     if (id !== null) ids.push(id)
   }
-  return ids
+  return { ids, seqs }
 }
 
 /** Enough of a live session for the rewind append. */

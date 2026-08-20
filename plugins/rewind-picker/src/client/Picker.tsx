@@ -46,8 +46,10 @@ function errorKey(code: string | undefined): string {
 export interface PickerHooks {
   /** The session this overlay instance is bound to, on every render. */
   onSession(sessionId: string): void
-  /** A rewind committed; these are the session's rewound message ids now. */
-  onRewound(sessionId: string, ids: readonly string[]): void
+  /** A rewind committed; this is the session's rewound state now. */
+  onRewound(sessionId: string, state: { ids: readonly string[]; seqs: readonly number[] }): void
+  /** Seqs already rewound in this session, which the list must not offer. */
+  rewoundSeqs(sessionId: string): ReadonlySet<number>
 }
 
 export function makePicker(
@@ -75,7 +77,10 @@ export function makePicker(
 
     // Newest first: rewinding is almost always "undo the last thing", so the
     // most likely target should not be at the bottom of a long scroll.
-    const points = React.useMemo(() => rewindPoints(nodes).reverse(), [nodes])
+    // Already-rewound messages are dropped: they are no longer surface nodes,
+    // so offering them again could only produce a refusal.
+    const gone = hooks.rewoundSeqs(sessionId)
+    const points = React.useMemo(() => rewindPoints(nodes, gone).reverse(), [nodes, gone])
     const total = points.length
 
     const close = React.useCallback(() => {
@@ -113,8 +118,7 @@ export function makePicker(
       restoreDraft(ctx, sessionId, point.text)
       // The host answers with the session's full rewound set, so the transcript
       // hides the exchange that just left the model's history.
-      const rewound = result.value?.rewound
-      if (rewound !== undefined) hooks.onRewound(sessionId, rewound)
+      hooks.onRewound(sessionId, { ids: result.value?.ids ?? [], seqs: result.value?.seqs ?? [] })
       close()
     }
 
