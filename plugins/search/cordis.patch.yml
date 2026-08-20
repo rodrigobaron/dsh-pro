@@ -1,0 +1,29 @@
+# Free web search: ten engines with automatic fallback, no API key required.
+# The host half registers a WebSearchProvider into ctx.web and serves a settings
+# bridge; the browser half is loaded from the package's `./client` export
+# because the package declares `dsh.client`.
+#
+# Engine, API keys, cache TTL, and language live in
+# Settings > Plugins > Free Search. The row below only states the defaults a
+# fresh install starts from.
+- insert:
+    - id: web-search-free
+      name: '@my-dsh/search'
+      config:
+        provider: ddg
+
+# Point the web seam at this plugin. THIS IS THE ROW THAT MAKES IT WORK.
+#
+# dsh-base sets `searchProvider: deepseek-official`, so without this override
+# the harness keeps routing web_search to DeepSeek and the plugin looks
+# installed but dead — every search still needs the DEEPSEEK_API_KEY this
+# plugin exists to avoid. Upstream documents the override in a comment but
+# does not ship it, which is exactly the trap.
+#
+# `ddg` here is the provider ID, not the engine, even though this build also
+# defaults the engine to ddg. Upstream registers its single provider under
+# that id and routes internally to whichever engine the settings name, so
+# this row would read `searchProvider: ddg` whatever engine was selected.
+- id: web
+  config:
+    searchProvider: ddg

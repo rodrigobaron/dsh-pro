@@ -24,14 +24,15 @@ preset is default.
 | `vision-toolkit` | vision skills for the agent: image Q&A, OCR, grounding, pixel diff |
 | `browser` | browser skills for the agent: open pages, read, click, fill, screenshot |
 | `at-file` | `@path` references in the composer: a workspace path picker and filter settings |
+| `search` | free web search: ten engines with automatic fallback, no API key |
 
 ## Adding a plugin
 
 Add a directory. The installer discovers it — there is no list to update.
 
-Most plugins here are built from `src/`. Two (`archived-sessions`,
-`vision-toolkit`) are repackaged from upstream releases rather than compiled:
-their published output is committed and the build script adapts it. Either
+Most plugins here are built from `src/`. Three (`archived-sessions`,
+`vision-toolkit`, `search`) are repackaged from upstream releases rather than
+compiled: their published output is committed and the build script adapts it. Either
 shape is just "a directory with a build script" as far as the installer is
 concerned.
 
@@ -289,6 +290,73 @@ level — so schemastery still comes from this repository's lockfile and the
 build stays reproducible. `npm install` prunes the links, which is why
 `typecheck` rebuilds them every run instead of assuming a setup step.
 
+## Web search
+
+`search` replaces the harness's default web search with ten free engines and
+automatic fallback. The default provider needs a `DEEPSEEK_API_KEY`; these need
+nothing.
+
+### The row that makes it work
+
+Upstream's own patch notes that `web.searchProvider` must point at its provider
+id — then does not ship that override. dsh-base sets
+`searchProvider: deepseek-official`, so a plain install leaves every search
+still going to DeepSeek. The plugin looks installed and does nothing, which is
+the worst kind of broken.
+
+So this package's `cordis.patch.yml` carries the override itself:
+
+```yaml
+- id: web
+  config:
+    searchProvider: ddg
+```
+
+`ddg` there is the **provider id**, not the engine. Upstream registers one
+provider under that id and routes internally to whichever engine the settings
+name, so the row reads `ddg` whatever engine you pick.
+
+Confirm it took with `dsh --profile web --dump-config`: the `web` row's
+`searchProvider` should read `ddg`, not `deepseek-official`.
+
+Note this row modifies a base row the plugin does not own — installing web
+search takes over web search, which is the point. Removing the plugin
+regenerates the patch without it, and the default comes back.
+
+### English defaults
+
+Upstream is tuned for Chinese. Four values carry that, and `scripts/build.mjs`
+rewrites each as an asserted exact-string replacement, so a changed upstream
+line fails the build instead of quietly shipping Chinese-first search:
+
+| Value | Upstream | Here |
+| --- | --- | --- |
+| `ACCEPT_LANG` | `zh-CN,zh;q=0.9,en;q=0.8` | `en-US,en;q=0.9` |
+| `lang` (settings UI) | `zh` | `en` |
+| `bingMarket` | `zh-CN` | `en-US` |
+| `region` (DuckDuckGo `kl`) | unset | `us-en` |
+
+`ACCEPT_LANG` is the one that matters most: it goes out on every engine's
+request through a single shared fetch helper, so it steers DuckDuckGo, Bing,
+SearXNG and AnySearch alike — far more than any per-engine market setting.
+
+The default **engine** changes for the same reason. Upstream picks Bing and
+says why: "most stable, optimized for Chinese (`zh-CN`)". That reason does not
+survive the switch. Measured on "what is the capital of Portugal", DuckDuckGo
+returned `en.wikipedia.org/wiki/Lisbon` first; Bing returned Capital One and a
+UK radio station behind `bing.com/ck/a` redirect wrappers. DuckDuckGo
+rate-limits more often, which the fallback chain already handles by moving on.
+
+Nothing else emits Chinese: every other Chinese string in the host half is a
+comment, and the model-facing text — tool descriptions and the injected
+system-prompt section — was already English. The browser half keeps both
+dictionaries and switches on `lang`, so Chinese stays available and is simply
+no longer the default.
+
+Engine, API keys, and cache TTL live in **Settings -> Plugins -> Free Search**,
+or `/free-search-engine` in the composer. Editing the generated profile patch
+is pointless — the installer rewrites it whole on every run.
+
 ## Language
 
 This repository writes English only, and English is the default. It does not
@@ -330,7 +398,7 @@ bytes* stays, because changing it would silently break the match.
 
 ## Licensing
 
-Five plugins here are derived from other people's work. Each keeps its upstream
+Six plugins here are derived from other people's work. Each keeps its upstream
 LICENSE, and a NOTICE recording exactly what was changed:
 
 | Plugin | Upstream | License |
@@ -339,6 +407,7 @@ LICENSE, and a NOTICE recording exactly what was changed:
 | `archived-sessions` | [Zephyr-vibe/dsh-archived-sessions](https://github.com/Zephyr-vibe/dsh-archived-sessions) | MIT |
 | `vision-toolkit` | [Anionex/dsh-vision-toolkit](https://github.com/Anionex/dsh-vision-toolkit) | MIT |
 | `at-file` | [omdsh-dev/dsh-at-file](https://github.com/omdsh-dev/dsh-at-file) | MIT |
+| `search` | [DDDMUC/dsh-free-search](https://github.com/DDDMUC/dsh-free-search) | MIT |
 | `browser` | [Clizo1209/dsh-playwright-browser](https://github.com/Clizo1209/dsh-playwright-browser) | MIT |
 
 Everything else in this directory is MIT and original to this repository.

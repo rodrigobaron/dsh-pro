@@ -1,0 +1,58 @@
+This package repackages dsh-free-search by DDDMUC, used under the MIT License.
+The original project lives at:
+
+    https://github.com/DDDMUC/dsh-free-search
+
+Upstream publishes this plugin prebuilt, with no sources, so vendor/ holds its
+published lib/ output verbatim and scripts/build.mjs adapts it. Every edit is
+an asserted exact-string rewrite, so a changed upstream line fails the build
+rather than silently shipping something unintended.
+
+English defaults. Upstream is tuned for Chinese, and four values carry that:
+
+  - `ACCEPT_LANG` is sent on every engine request through one shared fetch
+    helper, so `zh-CN,zh;q=0.9,en;q=0.8` steers DuckDuckGo, Bing, SearXNG and
+    AnySearch alike. This is the highest-leverage one; it now sends
+    `en-US,en;q=0.9`.
+  - `lang` (the settings UI language) defaults to `en` rather than `zh`.
+  - `bingMarket` defaults to `en-US` rather than `zh-CN`, in the config schema
+    and again in the hardcoded fallback that a cleared setting falls back to.
+  - `region` (DuckDuckGo's `kl` parameter) now defaults to `us-en`; upstream
+    leaves it unset.
+
+The default engine changes with them, for the same reason. Upstream picks Bing
+and says why: "most stable, optimized for Chinese (zh-CN)". That reason does
+not survive the switch to English. Measured here on "what is the capital of
+Portugal", DuckDuckGo returned en.wikipedia.org/wiki/Lisbon first while Bing
+returned Capital One and a UK radio station, behind bing.com/ck/a redirect
+wrappers. DuckDuckGo rate-limits more often, which the automatic fallback
+chain already handles by moving on to Bing and the rest.
+
+Nothing else in the plugin emits Chinese. Every other Chinese string in the
+host half is a comment, and the model-facing text — tool descriptions and the
+injected system-prompt section — is already English. The browser half keeps
+both dictionaries and switches on `lang`, so Chinese remains available; it is
+simply no longer the default.
+
+Identity. The browser bundle names itself three times: the `__ModuleLoader__`
+loader id (the web boot manifest looks a bundle up by the installed package
+name), a `settings.plugin.item` slot entry id (which must be unique within its
+slot), and a `data-plugin` attribute on its injected stylesheet. All three are
+retargeted to `@my-dsh/search`. The `/api/dsh-free-search-settings` bridge
+prefix is deliberately left alone: host and client must agree on it, and it is
+an internal path rather than an identity.
+
+Provider wiring. Upstream's cordis.patch.yml notes that `web.searchProvider`
+must point at its provider id, but does not ship that override — so a fresh
+install still routes web_search to DeepSeek and appears to do nothing. This
+package's patch sets it.
+
+Nothing is bundled: the host half imports only @deepseek-ai/dsh-settings,
+@deepseek-ai/dsh-tools, and @deepseek-ai/schemastery, all of which the harness
+profile already resolves.
+
+The tools/ directory of the upstream repository (a local engine-switcher with
+Windows .cmd launchers) is not carried; the settings page and the
+/free-search-engine command cover the same ground.
+
+The MIT License text, including its copyright notice, is in LICENSE.
