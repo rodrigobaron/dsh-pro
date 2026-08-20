@@ -37,87 +37,7 @@ window.__ModuleLoader__.load({
 		};
 		//#endregion
 		//#region locales
-		const zh = {
-			"nav": "会话管理",
-			"title": "会话管理",
-			"tab.all": "所有对话",
-			"tab.archived": "归档会话",
-			"empty": "没有可显示的会话",
-			"emptyAll": "没有未归档的对话",
-			"emptyArchived": "没有归档的会话",
-			"selectAll": "全选",
-			"selected": "已选 {n} 项",
-			"delete": "删除选中",
-			"deleting": "正在删除…",
-			"archive": "移动到归档",
-			"archiving": "正在归档…",
-			"unarchive": "移出归档",
-			"unarchiving": "正在移出…",
-			"view.workspace": "按工作区",
-			"view.flat": "单列表",
-			"searchPlaceholder": "搜索会话…",
-			"group.ungrouped": "未分组",
-			"group.sessions": "{n} 个会话",
-			"batchResult": "成功 {ok} 项，失败 {fail} 项",
-			"archiveConfirm": "确认将 {n} 个会话移动到归档？它们将从所有对话中隐藏，但记录不会删除。",
-			"openFolder": "打开记录文件夹",
-			"openFolderHint": "在文件管理器中打开所选会话的记录文件夹",
-			"confirm": "确认删除 {n} 个会话？",
-			"confirmNote": "会话记录将被永久删除，此操作不可恢复。",
-			"deleteCascade": "删除其下子对话（子代理）",
-			"deleteFiles": "删除所有下载文件/产出文件",
-			"deleteDetail": "详情",
-			"deleteDetailHint": "点详情可查看并勾选具体删除项",
-			"deleteDetailSubagents": "将删除的子对话",
-			"deleteDetailFiles": "将删除的下载/产出文件",
-			"deleteDetailFilesNote": "不会显示修改文件信息，只显示下载/产出文件",
-			"deleteDetailNone": "无",
-			"current": "当前会话",
-			"currentHint": "当前打开的会话不能删除，请先切换到其他会话",
-			"subagent": "子代理",
-			"subagentExpand": "展开子代理",
-			"subagentCollapse": "收起子代理",
-			"details": "详情",
-			"detailsLoading": "正在加载详情…",
-			"activity": "活动统计",
-			"loading": "正在加载…",
-			"retry": "重试",
-			"size": "占用空间",
-			"updated": "最后更新",
-			"turns": "轮次",
-			"steps": "步骤",
-			"userMessages": "用户消息",
-			"assistantMessages": "回复消息",
-			"toolCalls": "工具调用",
-			"attachments": "附件",
-			"tools": "工具使用",
-			"fetches": "网络获取 / 下载",
-			"noFetches": "无网络获取记录",
-			"lineage": "关联对话",
-			"parent": "父会话",
-			"children": "子会话（分叉）",
-			"subagents": "子代理会话",
-			"recalledBy": "被其他对话查看/召回",
-			"noRecalls": "暂无其他对话查看过本对话",
-			"files": "下载 / 产出文件",
-			"noFiles": "该对话没有产出文件",
-			"fileDelete": "删除选中文件",
-			"fileDeleteConfirm": "确认删除选中的 {n} 个文件？文件将被永久删除，此操作不可恢复。",
-			"fileDeleteDone": "已删除 {n} 个文件",
-			"fileDeleting": "正在删除文件…",
-			"count": "{n} 个",
-			"none": "无",
-			"na": "—",
-			"time.now": "刚刚",
-			"time.minutes": "{n}分钟",
-			"time.hours": "{n}小时",
-			"time.days": "{n}天",
-			"time.months": "{n}个月",
-			"time.years": "{n}年",
-			"close": "关闭",
-			"cancel": "取消"
-		};
-		const en = {
+				const en = {
 			"nav": "Session manager",
 			"title": "Session manager",
 			"tab.all": "All conversations",
@@ -1029,7 +949,7 @@ window.__ModuleLoader__.load({
 									style: { display: "flex", alignItems: "center", gap: 10, marginBottom: 8 },
 									children: [(0, react_jsx_runtime.jsx)("div", { style: { fontSize: 12, fontWeight: 500, color: "var(--dsw-alias-label-secondary)", lineHeight: "18px" }, children: t("files") }), (0, react_jsx_runtime.jsxs)("label", {
 										style: { display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "var(--dsw-alias-label-tertiary)", cursor: "pointer", lineHeight: "18px", marginTop: 2 },
-										children: [(0, react_jsx_runtime.jsx)("input", { type: "checkbox", checked: showFilePaths, onChange: (e) => setShowFilePaths(e.target.checked), style: { cursor: "pointer", margin: 0 } }), "显示路径"]
+										children: [(0, react_jsx_runtime.jsx)("input", { type: "checkbox", checked: showFilePaths, onChange: (e) => setShowFilePaths(e.target.checked), style: { cursor: "pointer", margin: 0 } }), "Show paths"]
 									})]
 								}),
 								files.length === 0 ? (0, react_jsx_runtime.jsx)("div", { className: pcss.hint, children: t("noFiles") }) : (() => {
@@ -1057,7 +977,7 @@ window.__ModuleLoader__.load({
 										const sepIdx = Math.max(rel.lastIndexOf("\\"), rel.lastIndexOf("/"));
 										if (sepIdx > 0) {
 											const folder = rel.slice(0, sepIdx);
-											// 记录文件夹完整路径（显示路径开关开启时与文件一致显示完整路径）
+											// 记录文件夹完整路径（Show paths开关开启时与文件一致显示完整路径）
 											const list = groups.get(folder) ?? [];
 											list.push({ ...file, relName: rel.slice(sepIdx + 1) });
 											groups.set(folder, list);
@@ -1368,7 +1288,7 @@ window.__ModuleLoader__.load({
 										style: { display: "flex", alignItems: "center", gap: 10, marginTop: 2 },
 										children: [(0, react_jsx_runtime.jsx)("div", { style: { fontSize: 12, color: "var(--dsw-alias-label-primary)", fontWeight: 500, lineHeight: "18px" }, children: t("deleteDetailFiles") }), (0, react_jsx_runtime.jsxs)("label", {
 											style: { display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "var(--dsw-alias-label-tertiary)", cursor: "pointer", lineHeight: "18px", marginTop: 2 },
-											children: [(0, react_jsx_runtime.jsx)("input", { type: "checkbox", checked: showFilePaths, onChange: (e) => setShowFilePaths(e.target.checked), style: { cursor: "pointer", margin: 0 } }), "显示路径"]
+											children: [(0, react_jsx_runtime.jsx)("input", { type: "checkbox", checked: showFilePaths, onChange: (e) => setShowFilePaths(e.target.checked), style: { cursor: "pointer", margin: 0 } }), "Show paths"]
 										})]
 									}), (0, react_jsx_runtime.jsx)("div", { style: { fontSize: 11, color: "var(--dsw-alias-label-tertiary)", marginBottom: 2 }, children: t("deleteDetailFilesNote") }), [...allDeleteDirs].length === 0 && [...allDeleteFilePaths].length === 0 ? (0, react_jsx_runtime.jsx)("div", { style: { fontSize: 11, color: "var(--dsw-alias-label-tertiary)" }, children: detailLoading ? t("loading") : t("deleteDetailNone") }) : (() => {
 										// 树形分组：文件归入其父目录（文件夹节点可展开查看内部文件）
@@ -1474,7 +1394,7 @@ window.__ModuleLoader__.load({
 			});
 		}
 		function apply(ctx) {
-			ctx.effect(() => ctx.locale.register(NS, { zh, en }), "dsh-archived-sessions: dictionaries");
+			ctx.effect(() => ctx.locale.register(NS, { en }), "dsh-archived-sessions: dictionaries");
 			const t = ctx.locale.bind(NS);
 			ctx.slots.inject("settings.section", () => ctx.slots.register({
 				name: "settings.section",

@@ -226,7 +226,7 @@ async function lenientInspect(persistence, sessionId, signal) {
 		const raw = await persistence.readRaw(sessionId, signal);
 		if (raw === void 0) {
 			// 会话不存在：inspect/readRaw 双双找不到，转成明确 404（原始错误无 status 会落到 500）
-			const notFound = new Error("找不到该会话的记录（会话不存在）");
+			const notFound = new Error("No record found for this session (the session does not exist)");
 			notFound.status = 404;
 			notFound.code = "session-not-found";
 			throw notFound;
@@ -266,7 +266,7 @@ async function buildDetails(ctx, sessionId) {
 		const inspected = await lenientInspect(persistence, sessionId);
 		if (inspected.meta === void 0) {
 			// 会话不存在：明确 404（persistence.inspect 抛的原始错误无 status，会落到 500）
-			const error = new Error("找不到该会话的记录（会话不存在）");
+			const error = new Error("No record found for this session (the session does not exist)");
 			error.status = 404;
 			error.code = "session-not-found";
 			throw error;
@@ -455,7 +455,7 @@ async function deleteSessionSingle(ctx, sessionId, options = {}) {
 	// 运行中会话由调用方（deleteSession）先 409 拦截，这里只处理已停止的。
 	const meta = await findSessionMeta(ctx, sessionId);
 	if (meta === void 0) {
-		const error = new Error("找不到该会话的记录（会话不存在）");
+		const error = new Error("No record found for this session (the session does not exist)");
 		error.status = 404;
 		error.code = "session-not-found";
 		throw error;
@@ -581,7 +581,7 @@ async function deleteSessionSingle(ctx, sessionId, options = {}) {
 				if (dir !== void 0 && dir !== "" && dir !== dirname(dir) && insideRoot) {
 					await rm(dir, { recursive: true, force: true });
 				} else if (dir !== void 0 && dir !== "" && !insideRoot) {
-					throw new Error("拒绝删除：会话记录目录不在会话根目录内");
+					throw new Error("Refusing to delete: the session record directory is not inside the session root");
 				}
 			}
 		}
@@ -630,7 +630,7 @@ async function deleteSession(ctx, sessionId, options = {}) {
 	const agents = ctx.get("agents");
 	const agent = agents?.get(sessionId);
 	if (agent !== void 0 && agent.status === "running") {
-		const error = new Error("会话正在运行，无法删除；请先停止该会话");
+		const error = new Error("The session is running and cannot be deleted; stop it first");
 		error.status = 409;
 		error.code = "session-busy";
 		throw error;
@@ -693,7 +693,7 @@ async function deleteFile(ctx, path, sessionId) {
 	try {
 		const info = await stat(target);
 		if (info.isDirectory()) {
-			const error = new Error("只能删除文件，不能删除目录");
+			const error = new Error("Only files can be deleted, not directories");
 			error.status = 403;
 			error.code = "not-a-file";
 			throw error;
@@ -708,7 +708,7 @@ async function deleteFile(ctx, path, sessionId) {
 		const known = new Set();
 		for (const file of details?.files ?? []) known.add(file.path);
 		if (!known.has(path)) {
-			const error = new Error("只能删除该会话产出文件列表中的文件");
+			const error = new Error("Only files listed among this session's output files can be deleted");
 			error.status = 403;
 			error.code = "not-produced-file";
 			throw error;
@@ -735,7 +735,7 @@ async function deleteFile(ctx, path, sessionId) {
 		}
 	}
 	if (!allowed) {
-		const error = new Error("只能删除工作区内的文件");
+		const error = new Error("Only files inside the workspace can be deleted");
 		error.status = 403;
 		error.code = "outside-workspace";
 		throw error;
@@ -750,14 +750,14 @@ async function deleteFile(ctx, path, sessionId) {
 async function openSessionFolder(ctx, sessionId) {
 	const meta = await findSessionMeta(ctx, sessionId);
 	if (meta === void 0) {
-		const error = new Error("找不到该会话的记录目录（会话不存在）");
+		const error = new Error("No record directory found for this session (the session does not exist)");
 		error.status = 404;
 		error.code = "session-not-found";
 		throw error;
 	}
 	const dir = sessionDirFor(meta);
 	if (dir === void 0) {
-		const error = new Error("该会话没有关联的工作目录，无法定位记录文件夹");
+		const error = new Error("This session has no associated working directory, so its record folder cannot be located");
 		error.status = 404;
 		error.code = "no-cwd";
 		throw error;
@@ -766,7 +766,7 @@ async function openSessionFolder(ctx, sessionId) {
 	try {
 		await stat(dir);
 	} catch {
-		const error = new Error("会话记录文件夹不存在（可能已被删除）");
+		const error = new Error("The session record folder does not exist (it may have been deleted)");
 		error.status = 404;
 		error.code = "folder-not-found";
 		throw error;
@@ -779,7 +779,7 @@ async function openSessionFolder(ctx, sessionId) {
 async function archiveSession(ctx, sessionId) {
 	const registry = ctx.get("workspaceRegistry");
 	if (registry === void 0 || typeof registry.archiveSession !== "function") {
-		const error = new Error("当前 Harness 版本不支持归档会话（缺少 workspaceRegistry.archiveSession）");
+		const error = new Error("This Harness version does not support archiving sessions (workspaceRegistry.archiveSession is missing)");
 		error.status = 501;
 		error.code = "unsupported";
 		throw error;
@@ -787,7 +787,7 @@ async function archiveSession(ctx, sessionId) {
 	// 会话不存在时给明确 404（官方 archiveSession 对不存在会话抛无 status 的错误，会落到 500）
 	const meta = await findSessionMeta(ctx, sessionId);
 	if (meta === void 0) {
-		const error = new Error("找不到该会话的记录（会话不存在）");
+		const error = new Error("No record found for this session (the session does not exist)");
 		error.status = 404;
 		error.code = "session-not-found";
 		throw error;
@@ -809,7 +809,7 @@ async function archiveSession(ctx, sessionId) {
 async function unarchiveSession(ctx, sessionId) {
 	const registry = ctx.get("workspaceRegistry");
 	if (registry === void 0 || typeof registry.requireState !== "function" || typeof registry.setState !== "function") {
-		const error = new Error("当前 Harness 版本不支持取消归档（缺少 workspaceRegistry 状态原语）");
+		const error = new Error("This Harness version does not support unarchiving (the workspaceRegistry state primitives are missing)");
 		error.status = 501;
 		error.code = "unsupported";
 		throw error;
@@ -817,7 +817,7 @@ async function unarchiveSession(ctx, sessionId) {
 	// 会话不存在时给明确 404，与 archive/delete/details 语义一致
 	const meta = await findSessionMeta(ctx, sessionId);
 	if (meta === void 0) {
-		const error = new Error("找不到该会话的记录（会话不存在）");
+		const error = new Error("No record found for this session (the session does not exist)");
 		error.status = 404;
 		error.code = "session-not-found";
 		throw error;
