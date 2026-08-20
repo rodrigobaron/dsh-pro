@@ -353,6 +353,24 @@ system-prompt section — was already English. The browser half keeps both
 dictionaries and switches on `lang`, so Chinese stays available and is simply
 no longer the default.
 
+### SearXNG needs your own instance
+
+Upstream ships six public SearXNG instances and none of them work. It is not
+rate limiting: SearXNG disables the JSON output format by default, and its bot
+limiter rejects anonymous `format=json`. Probed 2026-08-20, all six upstream
+defaults plus ten more public instances returned 429 to a **single** request,
+403, HTML instead of JSON, or nothing at all. Zero served JSON.
+
+That cost more than one dead engine, because `searxng` sits in the automatic
+fallback chain — every fallback spent six pointless requests on third parties
+before moving on. The default list is now empty, so it fails in milliseconds
+with `no instances configured` instead, and the system prompt tells the model
+the engine needs configuring rather than advertising it as free and keyless.
+
+The engine itself is untouched and is genuinely good against a **self-hosted**
+SearXNG, where JSON is on and no limiter is in the way. Point
+`searxngInstances` at yours.
+
 Engine, API keys, and cache TTL live in **Settings -> Plugins -> Free Search**,
 or `/free-search-engine` in the composer. Editing the generated profile patch
 is pointless — the installer rewrites it whole on every run.

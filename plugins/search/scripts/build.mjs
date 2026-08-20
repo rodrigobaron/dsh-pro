@@ -78,6 +78,43 @@ host = rewrite(host, 'options?.bingMarket ?? "zh-CN"', 'options?.bingMarket ?? "
 // means DuckDuckGo's own default; naming it keeps English results English.
 host = rewrite(host, 'region: z.string(),', 'region: z.string().default("us-en"),', 'DuckDuckGo region default')
 
+// ── host half: SearXNG is bring-your-own-instance ────────────────────────────
+// Upstream ships six public instances. None of them work, and not because of
+// transient rate limiting: SearXNG disables the JSON output format by default
+// and its bot limiter rejects anonymous `format=json`. Probed 2026-08-20, all
+// six upstream defaults plus ten more public instances returned 429 to a
+// SINGLE request, 403, HTML instead of JSON (the format is simply off), or
+// nothing at all. Zero served JSON.
+//
+// That matters beyond one failing engine: searxng sits in the automatic
+// fallback chain, so every fallback spent six pointless requests on third
+// parties — up to 8s each when an instance hangs rather than refusing fast —
+// before moving on. Emptying the list makes it fail instantly and honestly
+// with "no instances configured", a case upstream already handles.
+//
+// The engine stays, because it is genuinely good against a SELF-HOSTED
+// SearXNG, where JSON is enabled and no limiter is in the way. Point
+// `searxngInstances` at your own in Settings > Plugins > Free Search. The
+// upstream defaults, for reference: opnxng.com, priv.au, searx.be,
+// searx.tiekoetter.com, search.inetol.net, paulgo.io.
+host = rewrite(
+  host,
+  `const SEARXNG_INSTANCES = [\n  "https://opnxng.com",\n  "https://priv.au",\n`
+  + `  "https://searx.be",\n  "https://searx.tiekoetter.com",\n`
+  + `  "https://search.inetol.net",\n  "https://paulgo.io",\n];`,
+  'const SEARXNG_INSTANCES = [];',
+  'SearXNG default instance list',
+)
+
+// And tell the model the truth about it, so it stops picking an engine that
+// cannot work until someone configures it.
+host = rewrite(
+  host,
+  '"- searxng (meta-search, multi-instance) - FREE, no key",',
+  '"- searxng (meta-search) - FREE, but ONLY with a self-hosted instance configured in settings; public instances do not serve the JSON API",',
+  'SearXNG line in the system-prompt section',
+)
+
 await writeFile(join(ROOT, 'lib', 'index.js'), host)
 
 // ── client half: retarget the loader id ──────────────────────────────────────
