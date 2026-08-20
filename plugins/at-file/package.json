@@ -2,6 +2,7 @@
   "name": "@my-dsh/at-file",
   "description": "@path references in the composer: search workspace paths and hand the agent a path, without injecting file content.",
   "version": "0.1.0",
+  "author": "Rodrigo Baron <baron.rodrigo0@gmail.com>",
   "type": "module",
   "main": "lib/index.js",
   "exports": {

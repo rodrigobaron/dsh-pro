@@ -2,6 +2,7 @@
   "name": "@my-dsh/rewind",
   "description": "Rewind the conversation: remove a message and everything after it, durably, without ever reverting file changes.",
   "version": "0.1.0",
+  "author": "Rodrigo Baron <baron.rodrigo0@gmail.com>",
   "type": "module",
   "main": "lib/index.js",
   "exports": {

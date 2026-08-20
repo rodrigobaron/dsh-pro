@@ -2,6 +2,7 @@
   "name": "@my-dsh/routines",
   "description": "Scheduled agent routines: a cron engine resident in the dsh web host that fires real agent sessions, managed from the settings page or the routines tool.",
   "version": "0.1.0",
+  "author": "Rodrigo Baron <baron.rodrigo0@gmail.com>",
   "type": "module",
   "main": "lib/index.js",
   "exports": {

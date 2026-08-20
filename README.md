@@ -889,6 +889,39 @@ Chinese survives in four places, all of them deliberate:
 The rule is: Chinese we *emit* is gone; Chinese that *matches someone else's
 bytes* stays, because changing it would silently break the match.
 
+## Thanks
+
+This repository stands on other people's work. Nine of its plugins began as
+someone else's, and the ones written from scratch were shaped by reading them.
+
+- [bowenliang123/dsh-context](https://github.com/bowenliang123/dsh-context) —
+  the context dashboard and the `/context` command.
+- [Zephyr-vibe/dsh-archived-sessions](https://github.com/Zephyr-vibe/dsh-archived-sessions) —
+  session management, disk accounting, and lineage.
+- [Anionex/dsh-vision-toolkit](https://github.com/Anionex/dsh-vision-toolkit) and the
+  `agent-vision-toolkit` it packages — eyes for a text-only agent.
+- [omdsh-dev/dsh-at-file](https://github.com/omdsh-dev/dsh-at-file) — `@path`
+  references, and the pre-step injection pattern `deep-research` borrows.
+- [DDDMUC/dsh-free-search](https://github.com/DDDMUC/dsh-free-search) — ten
+  search engines with no API key, and the fallback chain behind them.
+- [omdsh-dev/dsh-notification](https://github.com/omdsh-dev/dsh-notification) —
+  desktop notifications and their rule engine.
+- [omdsh-dev/dsh-recall](https://github.com/omdsh-dev/dsh-recall) — conversation
+  rewind, and the user-bubble renderer it shadows to place a button there.
+- [linxin666/dsh-timer-agent](https://github.com/linxin666/dsh-timer-agent) —
+  the scheduled-agent engine, and its at-most-once firing discipline.
+- [Clizo1209/dsh-playwright-browser](https://github.com/Clizo1209/dsh-playwright-browser) —
+  browser automation with semantic locators.
+
+Thanks also to [NousResearch/hermes-agent](https://github.com/NousResearch/hermes-agent),
+whose cron design `dsh-timer-agent` follows and which therefore shapes
+`routines` here, and to the
+[DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) team, whose
+plugin seams made every one of these possible without a fork.
+
+Each derived plugin keeps its upstream LICENSE and carries a NOTICE recording
+exactly what changed and why.
+
 ## Licensing
 
 Eight plugins here are derived from other people's work. Each keeps its upstream

@@ -1,7 +1,8 @@
 {
   "name": "@my-dsh/vision-toolkit",
-  "description": "DeepSeek Harness-native integration for agent-vision-toolkit: image Q&A, OCR, grounding, UI restoration, pixel diff, Artifacts, and Web UI.",
+  "description": "Vision tools for a text-only agent: image Q&A, OCR, grounding, tracing, cropping, foreground extraction, HTML screenshots, and pixel diff.",
   "version": "0.1.35",
+  "author": "Anionex",
   "type": "module",
   "main": "lib/index.js",
   "exports": {
@@ -47,7 +48,6 @@
     }
   },
   "license": "MIT",
-  "author": "Anionex",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Anionex/dsh-vision-toolkit.git"

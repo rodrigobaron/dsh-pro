@@ -1,7 +1,8 @@
 {
   "name": "@my-dsh/client-ui-layout-wide",
-  "description": "Layout fork with a resizable wide details column: the canvas opens at ~35% of the viewport (min 420px) and drags out to ~70%.",
+  "description": "Layout fork with a resizable wide details column: the canvas opens at ~40% of the viewport (min 420px) and drags out to ~70%.",
   "version": "0.1.0",
+  "author": "Rodrigo Baron <baron.rodrigo0@gmail.com>",
   "type": "module",
   "main": "lib/index.js",
   "exports": {

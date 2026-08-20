@@ -2,6 +2,7 @@
   "name": "@my-dsh/archived-sessions",
   "description": "Session manager in Settings: browse all conversations and archived sessions, inspect per-session disk usage and lineage, and permanently delete.",
   "version": "0.1.4",
+  "author": "Zephyr-vibe",
   "type": "module",
   "main": "lib/index.js",
   "exports": {
@@ -29,7 +30,6 @@
     }
   },
   "license": "MIT",
-  "author": "Zephyr-vibe",
   "repository": {
     "type": "git",
     "url": "https://github.com/Zephyr-vibe/dsh-archived-sessions.git"

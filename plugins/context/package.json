@@ -2,6 +2,7 @@
   "name": "@my-dsh/context",
   "description": "Context insight and management: a context dashboard tab and a /context command showing how the agent's context is composed and how it evolves.",
   "version": "0.17.0",
+  "author": "bowenliang123",
   "type": "module",
   "main": "lib/index.js",
   "exports": {
@@ -31,7 +32,6 @@
     }
   },
   "license": "Apache-2.0",
-  "author": "bowenliang123",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/bowenliang123/dsh-context.git"

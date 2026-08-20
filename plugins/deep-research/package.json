@@ -2,6 +2,7 @@
   "name": "@my-dsh/deep-research",
   "description": "A /deep-research command and the skill behind it: a controlled multi-modality search loop run as a workflow.",
   "version": "0.1.0",
+  "author": "Rodrigo Baron <baron.rodrigo0@gmail.com>",
   "type": "module",
   "main": "lib/index.js",
   "exports": {
@@ -9,15 +10,26 @@
     "./client": "./lib/client.js",
     "./package.json": "./package.json"
   },
-  "files": ["lib", "cordis.patch.yml", "LICENSE"],
+  "files": [
+    "lib",
+    "cordis.patch.yml",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "node scripts/build.mjs",
     "test": "node scripts/build.mjs && node test/command.test.mjs",
     "typecheck": "node scripts/link-harness.mjs && tsc --noEmit"
   },
   "dsh": {
-    "bundle": { "patch": "./cordis.patch.yml" },
-    "client": { "platform": "web", "inject": ["@deepseek-ai/dsh-client-ui-input-trigger"] }
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-input-trigger"
+      ]
+    }
   },
   "license": "MIT",
   "devDependencies": {
