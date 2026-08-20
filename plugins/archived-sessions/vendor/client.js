@@ -126,9 +126,9 @@ window.__ModuleLoader__.load({
 		const DETAILS_CACHE_LIMIT = 50;
 		async function api(method, payload, options) {
 			const controller = new AbortController();
-			// m8: 超时覆盖到响应体读取完成——timer 在 fetch resolve 后不清除，
-			// 而是等 response.json() 解析完再 clear，避免响应头到达但 body 挂起
-			// 时无限等待（loading 卡住）。
+			// m8: the timeout covers reading the body too — the timer is not cleared when
+			// fetch resolves but after response.json() parses, so headers arriving while
+			// the body hangs cannot wait forever and leave loading stuck.
 			const timer = setTimeout(() => controller.abort(), options?.timeoutMs ?? API_TIMEOUT_MS);
 			let response;
 			try {
@@ -177,7 +177,8 @@ window.__ModuleLoader__.load({
 			return id.length > 20 ? `${id.slice(0, 10)}…${id.slice(-4)}` : id;
 		}
 		/** Resolve the best display title: durable title projection, summary title, display title, then a short id.
-		 * m7: session 缺失（如孤儿归档条目）时兜底返回 shortId，避免渲染空标题行。 */
+		 * m7: when the session is missing (an orphaned archive entry, say) fall back to
+		 * shortId, so no row renders with an empty title. */
 		function sessionTitleOf(s, fallbackId) {
 			if (s === void 0) return typeof fallbackId === "string" && fallbackId !== "" ? shortId(fallbackId) : "";
 			const projected = s.projectionValues && typeof s.projectionValues === "object" ? s.projectionValues.title : void 0;
@@ -203,8 +204,10 @@ window.__ModuleLoader__.load({
 			if (unit === "now") return t("time.now");
 			return t(`time.${unit}`).replace("{n}", String(n));
 		}
-		/** 行组件（memo）：props 全部为基本类型/稳定引用，父组件重渲染时未变化的行跳过，
-		 * 避免会话高频更新（agent 运行中）导致整个列表反复重建 DOM（打开卡顿优化）。 */
+		/** Row component (memo): every prop is a primitive or a stable reference, so an
+		 * unchanged row is skipped when the parent re-renders. Without it, frequent
+		 * session updates (while an agent runs) would rebuild the whole list's DOM
+		 * over and over — this is what keeps opening the panel smooth. */
 		const SessionRow = (0, react.memo)(function SessionRow(props) {
 			const { row, isSelected, isExpanded, hasKids, kidsOpen, depth, timeText, showSubagentBadge,
 				currentText, currentHintText, subagentText, detailsLabel, subagentExpandLabel, subagentCollapseLabel,
@@ -212,11 +215,12 @@ window.__ModuleLoader__.load({
 			return (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, {
 				children: [(0, react_jsx_runtime.jsxs)("div", {
 					className: `${pcss.row}${isSelected ? ` ${pcss.rowSelected}` : ""}${row.current ? ` ${pcss.current}` : ""}${row.subagent ? ` ${pcss.subagentRow}` : ""}`,
-					// 多级缩进：孙级及更深子代理逐层加深，与父级子代理区分层级
+					// Nested indentation: grandchild subagents and deeper step in one level at a
+					// time, keeping their depth visually distinct from their parent's
 					style: row.subagent && depth > 1 ? { paddingLeft: 20 + (depth - 1) * 16 } : void 0,
 					"aria-selected": isSelected,
 					title: row.current ? currentHintText : void 0,
-					tabIndex: row.current ? -1 : 0, // m12: 行可聚焦支持键盘选择
+					tabIndex: row.current ? -1 : 0, // m12: focusable rows enable keyboard selection
 					onKeyDown: row.current ? void 0 : (event) => onKeyDown(row.id, event),
 					onMouseDown: row.current ? void 0 : (event) => onMouseDown(row.id, event),
 					onMouseEnter: row.current ? void 0 : () => onMouseEnter(row.id),
@@ -260,8 +264,9 @@ window.__ModuleLoader__.load({
 			});
 		});
 		function ArchivedSessionsSection({ useSessions, useWorkspaces, refresh, t }) {
-			// 拆开订阅：byId 引用变化才触发重渲染（会话集合更新），
-			// current/phase 单独订阅，避免 store 顶层对象抖动时全量重渲染（打开卡顿优化）
+			// Split subscriptions: only a byId reference change re-renders (the session set
+			// changed); current/phase subscribe separately, so churn in the store's top
+			// level object cannot force a full re-render — again, opening stays smooth
 			const sessionsById = useSessions((s) => s?.byId);
 			const sessionCurrent = useSessions((s) => s?.current);
 			const sessionPhase = useSessions((s) => s?.phase);
@@ -276,7 +281,8 @@ window.__ModuleLoader__.load({
 			const workspacesState = workspaceState?.state;
 			const baselinesReady = workspaceState?.baselinesReady;
 			const workspaceError = workspaceState?.error;
-			// m11: 60s ticker 驱动相对时间标签自动刷新（cleanup 防止 interval 泄漏）
+			// m11: a 60s ticker refreshes the relative-time labels (cleanup stops the
+			// interval leaking)
 			const [, setTick] = (0, react.useState)(0);
 			(0, react.useEffect)(() => {
 				const timer = setInterval(() => setTick((t) => t + 1), 60e3);
@@ -284,7 +290,8 @@ window.__ModuleLoader__.load({
 			}, []);
 			const now = Date.now();
 			const [tab, setTab] = (0, react.useState)("all");
-			// 默认按工作区分组（更贴近"会话归属哪个项目"的使用习惯）
+			// Group by workspace by default, which matches how people actually think about
+			// which project a session belongs to
 			const [viewMode, setViewMode] = (0, react.useState)("workspace");
 			const [searchQuery, setSearchQuery] = (0, react.useState)("");
 			const [expandedParents, setExpandedParents] = (0, react.useState)(() => new Set());
@@ -297,13 +304,14 @@ window.__ModuleLoader__.load({
 				});
 			}, []);
 			const archivedSet = (0, react.useMemo)(() => new Set(archivedIds), [archivedIds]);
-			/** id 归一化工具：byId 的 key 与 parentId 的格式可能不一致（有的带
-			 * `session-` 前缀、有的是纯 uuid）。所有归属匹配统一经 normId 双向
-			 * 归一，避免子代理被误判为孤儿。 */
+			/** Id normalization: byId's keys and parentId may not share a format — some
+			 * carry a `session-` prefix, some are bare uuids. Every parent match goes
+			 * through normId in both directions, so a subagent is never mistaken for an
+			 * orphan. */
 			const normId = (id) => (typeof id === "string" && id.startsWith("session-") ? id.slice("session-".length) : id);
 			const allRows = (0, react.useMemo)(() => {
 				const sortRows = (rows) => rows.sort((a, b) => {
-					// 当前会话置顶；无当前会话时按最近更新排序
+					// Current session first; with no current session, sort by most recently updated
 					if (a.current !== b.current) return a.current ? -1 : 1;
 					return (b.updatedAt ?? 0) - (a.updatedAt ?? 0);
 				});
@@ -333,8 +341,8 @@ window.__ModuleLoader__.load({
 				return sortRows(all);
 			}, [tab, archivedIds, archivedSet, byId, current]);
 			/** O(1) lookups for parent/subagent attribution (H2: replaces O(N²) scans).
-			 * idSet/rowById 同时登记原始 id 与 normId 变体，parentId 无论带不带
-			 * `session-` 前缀都能命中父行。 */
+			 * idSet/rowById register both the raw id and its normId variant, so a parentId
+			 * matches its parent row whether or not it carries the `session-` prefix. */
 			const rowIndex = (0, react.useMemo)(() => {
 				const idSet = new Set();
 				const rowById = new Map();
@@ -362,8 +370,9 @@ window.__ModuleLoader__.load({
 				if (q === "") return allRows;
 				return allRows.filter((row) => row.title.toLowerCase().includes(q) || row.id.toLowerCase().includes(q));
 			}, [allRows, searchQuery]);
-			/** 行深度（树结构决定，与展开状态无关）：顶层 0，子代理逐层 +1。
-			 * 渲染时按深度叠加缩进，孙级子代理与父级子代理在视觉上区分层级。 */
+			/** Row depth, decided by the tree and independent of expansion state: top level
+			 * is 0 and each subagent adds one. Indentation is applied per depth, so a
+			 * grandchild subagent reads as a level below its parent. */
 			const depthOf = (0, react.useMemo)(() => {
 				const childrenOf = new Map();
 				for (const row of filteredRows) {
@@ -377,7 +386,7 @@ window.__ModuleLoader__.load({
 				const depth = new Map();
 				const visited = new Set();
 				const walk = (id, d) => {
-					if (visited.has(id)) return; // 防环（损坏数据）
+					if (visited.has(id)) return; // Cycle guard (corrupt data)
 					visited.add(id);
 					depth.set(id, d);
 					for (const kid of childrenOf.get(normId(id)) ?? []) walk(kid, d + 1);
@@ -405,7 +414,8 @@ window.__ModuleLoader__.load({
 					}
 				}
 				const result = [];
-				// 递归挂子代：展开的节点继续深入，子代理的子代理（孙级）也能显示
+				// Attach descendants recursively: an expanded node keeps descending, so a
+				// subagent's own subagents (grandchildren) show too
 				const append = (row) => {
 					result.push(row);
 					const kids = childrenOf.get(normId(row.id));
@@ -434,8 +444,9 @@ window.__ModuleLoader__.load({
 					list.push(row);
 					childrenOf.set(parentKey, list);
 				}
-				/** 归属判定与展开状态无关：子代理永远跟随父会话。
-				 * m15: visited 防环——损坏数据（parentId 成环）时不至于无限递归。 */
+				/** Parentage is independent of expansion state: a subagent always follows its
+				 * parent session. m15: visited guards against cycles, so corrupt data (a
+				 * parentId loop) cannot recurse forever. */
 				const lineageOf = (id) => {
 					const ids = [];
 					const visited = new Set();
@@ -451,7 +462,8 @@ window.__ModuleLoader__.load({
 				};
 				const attachKids = (rows) => {
 					const result = [];
-					// 递归挂子代：孙级子代理在父级展开时逐层显示
+					// Attach descendants recursively: grandchild subagents appear level by level as
+					// their parent expands
 					const append = (row) => {
 						result.push(row);
 						const kids = childrenOf.get(normId(row.id));
@@ -464,7 +476,8 @@ window.__ModuleLoader__.load({
 				};
 				const byWorkspace = workspaceItems.map((ws) => {
 					const tops = (ws.sessionIds ?? []).map((id) => rowIndex.rowById.get(id) ?? rowIndex.rowById.get(normId(id))).filter((row) => row !== void 0);
-					// 组内排序：当前会话置顶，其余按最近更新降序（与单列表一致）
+					// Within a group: current session first, the rest by most recently updated,
+					// matching the flat list
 					tops.sort((a, b) => {
 						if (a.current !== b.current) return a.current ? -1 : 1;
 						return (b.updatedAt ?? 0) - (a.updatedAt ?? 0);
@@ -477,12 +490,13 @@ window.__ModuleLoader__.load({
 					};
 				}).filter((group) => group.rows.length > 0);
 				const accounted = new Set(byWorkspace.flatMap((group) => group.allIds));
-				/** 未分组 = 顶层会话 + 父缺失的孤儿 subagent（与 flat 视图的顶层判定
-				 * 一致：`!row.subagent || row.parentId === void 0 || !rowIndex.idSet.has(normId(row.parentId))`），
-				 * 且不归属任何工作区；已归档的由上层过滤。M5: 修复前孤儿 subagent
-				 * 在 workspace 视图下完全不可见。 */
+				/** Ungrouped = top-level sessions plus orphaned subagents whose parent is gone
+				 * (the same top-level test the flat view uses:
+				 * `!row.subagent || row.parentId === void 0 || !rowIndex.idSet.has(normId(row.parentId))`),
+				 * belonging to no workspace; archived ones are filtered above. M5: before
+				 * this fix an orphaned subagent was invisible in the workspace view. */
 				const ungrouped = filteredRows.filter((row) => !accounted.has(row.id) && (!row.subagent || row.parentId === void 0 || !rowIndex.idSet.has(normId(row.parentId))));
-				// 未分组同样置顶当前会话
+				// Ungrouped puts the current session first as well
 				ungrouped.sort((a, b) => {
 					if (a.current !== b.current) return a.current ? -1 : 1;
 					return (b.updatedAt ?? 0) - (a.updatedAt ?? 0);
@@ -496,14 +510,16 @@ window.__ModuleLoader__.load({
 			const loading = (listPhase === "pending" || workspacesState === "loading") && rows.length === 0;
 			const selectableIds = (0, react.useMemo)(() => rows.filter((row) => !row.current).map((row) => row.id), [rows]);
 			const [selected, setSelected] = (0, react.useState)(() => new Set());
-			/** M4: 批量操作分批执行（每批 20 个、批间串行），避免全选上千会话时
-			 * 上千并发 fetch 打爆浏览器连接池与 host 端请求队列。 */
+			/** M4: bulk operations run in batches of 20, serially between batches. Selecting
+			 * a thousand sessions would otherwise fire a thousand concurrent fetches and
+			 * swamp both the browser's connection pool and the host's request queue. */
 			const BATCH_SIZE = 20;
 			const runBatch = async (method, targets, extra) => {
 				const results = [];
 				for (let i = 0; i < targets.length; i += BATCH_SIZE) {
 					const chunk = targets.slice(i, i + BATCH_SIZE);
-					// 每批内部并行（host 端 mutation 已串行化，安全），批间 await
+					// Parallel within a batch (host-side mutations are already serialized, so this
+					// is safe), awaited between batches
 					const settled = await Promise.allSettled(chunk.map((id) => api(method, { sessionId: id, ...(extra ?? {}) })));
 					results.push(...settled);
 				}
@@ -520,13 +536,14 @@ window.__ModuleLoader__.load({
 			const [deleting, setDeleting] = (0, react.useState)(false);
 			const [error, setError] = (0, react.useState)(null);
 			const [confirmOpen, setConfirmOpen] = (0, react.useState)(false);
-			// 细粒度删除：详情面板里勾选的子代理 / 文件（默认都不勾选）
+			// Fine-grained delete: the subagents and files ticked in the details panel
+			// (nothing is ticked by default)
 			const [deleteSubagentIds, setDeleteSubagentIds] = (0, react.useState)(() => new Set());
 			const [deleteFilePaths, setDeleteFilePaths] = (0, react.useState)(() => new Set());
 			const [allDeleteSubagentIds, setAllDeleteSubagentIds] = (0, react.useState)(() => new Set());
 			const [allDeleteFilePaths, setAllDeleteFilePaths] = (0, react.useState)(() => new Set());
 			const [allDeleteDirs, setAllDeleteDirs] = (0, react.useState)(() => new Set());
-			// 浏览器端路径 dirname（client bundle 无 node path）
+			// Browser-side dirname (the client bundle has no node path)
 			const dirOf = (p) => {
 				const idx = Math.max(p.lastIndexOf("\\"), p.lastIndexOf("/"));
 				return idx > 0 ? p.slice(0, idx) : p;
@@ -538,7 +555,7 @@ window.__ModuleLoader__.load({
 			const [subagentDetailOpen, setSubagentDetailOpen] = (0, react.useState)(false);
 			const [filesDetailOpen, setFilesDetailOpen] = (0, react.useState)(false);
 			const [detailLoading, setDetailLoading] = (0, react.useState)(false);
-			// 全选复选框半选态（部分勾选时显示 indeterminate）
+			// Select-all checkbox tri-state (indeterminate when only some are ticked)
 			const subagentAllRef = (0, react.useRef)(null);
 			const filesAllRef = (0, react.useRef)(null);
 			(0, react.useEffect)(() => {
@@ -557,21 +574,23 @@ window.__ModuleLoader__.load({
 			const [detailsError, setDetailsError] = (0, react.useState)(null);
 			const [selectedFiles, setSelectedFiles] = (0, react.useState)(() => new Set());
 			const [fileDeleting, setFileDeleting] = (0, react.useState)(false);
-			// 详情面板：产出文件夹展开状态（key = 相对文件夹路径）
+			// Details panel: expansion state of output folders (key = relative folder path)
 			const [expandedFileDirs, setExpandedFileDirs] = (0, react.useState)(() => new Set());
-			// 详情面板：显示完整文件路径开关（默认关闭，只显示文件名）
+			// Details panel: whether to show full file paths (off by default, showing only
+			// the file name)
 			const [showFilePaths, setShowFilePaths] = (0, react.useState)(false);
 			const switchTab = (0, react.useCallback)((next) => {
 				setTab(next);
 				setSelected(new Set());
 				setExpandedId(null);
 				setDetailsError(null);
-				setSelectedFiles(new Set()); // m10: 切 tab 清文件选择残留
+				setSelectedFiles(new Set()); // m10: switching tabs clears leftover file selections
 			}, []);
 			(0, react.useEffect)(() => {
 				if (dragMode === null) return;
 				const end = () => setDragMode(null);
-				// m13: 鼠标移出窗口释放（blur）或离开页面时兜底清理，防止 dragMode 卡住
+				// m13: release on blur or when the pointer leaves the page, so dragMode cannot
+				// get stuck
 				const onBlur = () => setDragMode(null);
 				const onVisibility = () => { if (document.visibilityState === "hidden") setDragMode(null); };
 				window.addEventListener("mouseup", end);
@@ -600,7 +619,8 @@ window.__ModuleLoader__.load({
 			const onRowMouseEnter = (0, react.useCallback)((id) => {
 				if (dragMode !== null) applyRow(id, dragMode);
 			}, [dragMode, applyRow]);
-			/** m12: 键盘选择——行聚焦时 Enter/Space 切换选择（跳过按钮/输入框等交互元素）。 */
+			/** m12: keyboard selection — Enter/Space toggles a focused row, skipping
+			 * interactive elements such as buttons and inputs. */
 			const onRowKeyDown = (0, react.useCallback)((id, event) => {
 				const target = event.target;
 				if (target !== null && typeof target === "object" && (target.tagName === "BUTTON" || target.tagName === "INPUT")) return;
@@ -617,11 +637,12 @@ window.__ModuleLoader__.load({
 					return;
 				}
 				setExpandedId(row.id);
-				// 切换展开行时清空文件选择，避免把上一行的选中文件带过来误删
+				// Clear file selection when a different row expands, so the previous row's
+				// ticked files cannot be carried over and deleted by mistake
 				setSelectedFiles(new Set());
 				setDetailsError(null);
 				if (detailsCache.has(row.id)) {
-					// LRU touch：把命中的条目移到最近使用位置
+					// LRU touch: move the hit entry to the most-recently-used position
 					setDetailsCache((prev) => {
 						if (!prev.has(row.id)) return prev;
 						const next = new Map(prev);
@@ -636,12 +657,12 @@ window.__ModuleLoader__.load({
 				latestDetailsRequest.current = targetId;
 				setDetailsBusyIds((prev) => new Set(prev).add(targetId));
 				api("details", { sessionId: targetId }).then((value) => {
-					if (latestDetailsRequest.current !== targetId) return; // 过期响应丢弃，不写缓存不报错
+					if (latestDetailsRequest.current !== targetId) return; // Stale response: dropped without caching or erroring
 					setDetailsCache((prev) => {
 						const next = new Map(prev);
 						next.delete(targetId);
 						next.set(targetId, value);
-						// LRU 上限：淘汰最旧条目（Map 按插入序迭代）
+						// LRU bound: evict the oldest entry (a Map iterates in insertion order)
 						while (next.size > DETAILS_CACHE_LIMIT) {
 							const oldest = next.keys().next().value;
 							if (oldest === void 0 || oldest === targetId) break;
@@ -665,15 +686,18 @@ window.__ModuleLoader__.load({
 			const toggleAll = () => {
 				setSelected(allSelected ? new Set() : new Set(selectableIds));
 			};
-			/** 打开删除确认：收集选中会话的所有后代子代理（含孙级，来自 byId 树）
-			 * 与全部下载/产出文件（逐个拉详情），供详情面板细粒度勾选。默认都不勾选。 */
+			/** Open the delete confirmation: gather every descendant subagent of the
+			 * selected sessions (grandchildren included, from the byId tree) and all their
+			 * downloads and output files (fetching details one by one), so the panel can
+			 * offer fine-grained ticks. Nothing is ticked by default. */
 			const openDeleteConfirm = async () => {
 				setConfirmOpen(true);
 				setSubagentDetailOpen(false);
 				setFilesDetailOpen(false);
 				const targets = selectableIds.filter((id) => selected.has(id));
-				// 子代理树（递归）——比较双方都经 normId：byId 的 key 与 parentId
-				// 可能一个带 session- 前缀一个是纯 uuid，单向比较会漏掉子代理
+				// Subagent tree (recursive) — both sides go through normId, because byId's key
+				// and parentId may differ (one prefixed with session-, the other a bare uuid),
+				// and a one-way comparison would miss subagents
 				const kids = new Set();
 				const findKids = (id) => {
 					const target = normId(id);
@@ -688,8 +712,8 @@ window.__ModuleLoader__.load({
 				const kidsSet = new Set(kids);
 				setAllDeleteSubagentIds(kidsSet);
 				setDeleteSubagentIds(new Set());
-				// 文件列表：选中会话 + 全部后代子代理（详情面板里勾选子代理后，
-				// 其产出文件也应出现在可勾选列表中）
+				// File list: the selected sessions plus every descendant subagent, so ticking a
+				// subagent in the panel also surfaces its output files as tickable
 				setDetailLoading(true);
 				try {
 					const files = new Set();
@@ -699,15 +723,16 @@ window.__ModuleLoader__.load({
 							const d = await api("details", { sessionId: id });
 							for (const f of d?.files ?? []) files.add(f.path);
 						} catch {
-							// 单个会话详情失败不影响其他
+							// One session's details failing does not affect the others
 						}
 					}
 					const filesSet = new Set(files);
 					setAllDeleteFilePaths(filesSet);
 					setDeleteFilePaths(new Set());
-					// 推导产出文件夹（文件的直接父目录去重）——文件夹也能勾选删除。
-					// 安全规则：工作区根目录绝不作为可删文件夹（AI 直接在工作区根下
-					// 生成的文件只删文件本身）；只有工作区根以下的子文件夹才可整删。
+					// Derive output folders (deduplicated immediate parents of the files) so a
+					// folder can be ticked for deletion too. Safety rule: a workspace root is
+					// never offered as a deletable folder — files the agent wrote directly under
+					// the root are deleted individually; only subfolders below it can go whole.
 					const wsRoots = new Set((workspaceItems ?? []).map((ws) => ws.path).map((p) => (typeof p === "string" ? p.replace(/[\\/]+$/, "") : "")));
 					const dirs = new Set();
 					for (const fp of filesSet) {
@@ -731,7 +756,7 @@ window.__ModuleLoader__.load({
 					await runBatch("delete", targets, { subagentIds: [...deleteSubagentIds], filePaths: [...deleteFilePaths] });
 					setSelected(new Set());
 					setConfirmOpen(false);
-					// s3: 清理被删会话的详情缓存，避免残留过期数据
+					// s3: drop the deleted session's details cache, so no stale data survives
 					setDetailsCache((prev) => {
 						const next = new Map(prev);
 						for (const id of targets) next.delete(id);
@@ -766,7 +791,7 @@ window.__ModuleLoader__.load({
 					await runBatch("archive", targets);
 					setSelected(new Set());
 					setArchiveConfirmOpen(false);
-					// s3: 归档后详情缓存同样失效（列表归属已变）
+					// s3: archiving invalidates the details cache too (the row's grouping changed)
 					setDetailsCache((prev) => {
 						const next = new Map(prev);
 						for (const id of targets) next.delete(id);
@@ -787,7 +812,7 @@ window.__ModuleLoader__.load({
 				try {
 					await runBatch("unarchive", targets);
 					setSelected(new Set());
-					// s3: 移出归档后同样失效缓存
+					// s3: unarchiving invalidates the cache as well
 					setDetailsCache((prev) => {
 						const next = new Map(prev);
 						for (const id of targets) next.delete(id);
@@ -805,7 +830,7 @@ window.__ModuleLoader__.load({
 				setSelected(new Set());
 				setExpandedId(null);
 				setDetailsError(null);
-				setSelectedFiles(new Set()); // m10: 切视图清文件选择残留
+				setSelectedFiles(new Set()); // m10: switching views clears leftover file selections
 			}, []);
 			const toggleFile = (path) => {
 				setSelectedFiles((prev) => {
@@ -815,7 +840,7 @@ window.__ModuleLoader__.load({
 					return next;
 				});
 			};
-			// 文件夹勾选：全选/取消文件夹内所有文件
+			// Folder tick: select or clear every file inside the folder
 			const toggleFolderFiles = (flist) => {
 				setSelectedFiles((prev) => {
 					const next = new Set(prev);
@@ -828,10 +853,11 @@ window.__ModuleLoader__.load({
 					return next;
 				});
 			};
-			// m9: 文件删除带确认弹窗（与会话删除一致），避免误点永久删除产出文件
+			// m9: deleting a file asks for confirmation (as deleting a session does), so a
+			// misclick cannot permanently remove an output file
 			const [fileConfirmOpen, setFileConfirmOpen] = (0, react.useState)(false);
 			const [pendingFileDeleteRow, setPendingFileDeleteRow] = (0, react.useState)(null);
-			// 删除文件成功提示（3 秒后自动消失）
+			// File-deleted notice (clears itself after 3 seconds)
 			const [fileNotice, setFileNotice] = (0, react.useState)(null);
 			const noticeTimer = (0, react.useRef)(null);
 			const flashFileNotice = (text) => {
@@ -851,7 +877,8 @@ window.__ModuleLoader__.load({
 				setFileConfirmOpen(false);
 				setPendingFileDeleteRow(null);
 				if (row === null || row === void 0) return;
-				// 只删除当前展开行详情里列出的文件，防止误删其它行残留的选中项
+				// Delete only the files listed in the currently expanded row's details, so a
+				// leftover selection from another row cannot be removed by mistake
 				const current = detailsCache.get(row.id);
 				const known = new Set((current?.files ?? []).map((file) => file.path));
 				const targets = [...selectedFiles].filter((path) => known.has(path));
@@ -859,8 +886,9 @@ window.__ModuleLoader__.load({
 				setFileDeleting(true);
 				setError(null);
 				try {
-					// m9: 并行删除 + 汇总失败（不再因单个失败中断全部）；M6: 传 sessionId
-					// 让 host 端校验 path 确属该会话产出文件
+					// m9: delete in parallel and summarize failures, instead of aborting everything
+					// on the first one; M6: sessionId is sent so the host can verify the path
+					// really is one of that session's output files
 					const results = await Promise.allSettled(targets.map((path) => api("delete-file", { path, sessionId: row.id })));
 					const failed = results.filter((r) => r.status === "rejected");
 					if (failed.length > 0) {
@@ -869,8 +897,9 @@ window.__ModuleLoader__.load({
 					}
 					setSelectedFiles(new Set());
 					const value = await api("details", { sessionId: row.id });
-					// host 端 files 列表来自会话事件记录（write/edit 的 file_path），
-					// 删除物理文件后记录仍在——本地剔除已删路径，避免"文件已删但列表还在"
+					// The host's files list comes from the session event log (write/edit
+					// file_path), and the record outlives the file — so deleted paths are pruned
+					// locally, avoiding a list that still shows what is already gone
 					const removed = new Set(targets);
 					const nextValue = {
 						...value,
@@ -892,7 +921,8 @@ window.__ModuleLoader__.load({
 				const loading = data === void 0 && detailsBusyIds.has(row.id);
 				const failed = data === void 0 && detailsError !== null;
 				const subagents = data?.lineage?.subagents ?? [];
-				// s4: 客户端再截断一道（与服务端 MAX_FILES=200 对齐，双保险）
+				// s4: truncate client-side as well (matching the server's MAX_FILES=200, as a
+				// second line of defence)
 				const files = (data?.files ?? []).slice(0, 200);
 				const stats = data?.stats;
 				const toolNames = stats && typeof stats.toolCounts === "object" && stats.toolCounts !== null ? Object.keys(stats.toolCounts) : [];
@@ -953,8 +983,9 @@ window.__ModuleLoader__.load({
 									})]
 								}),
 								files.length === 0 ? (0, react_jsx_runtime.jsx)("div", { className: pcss.hint, children: t("noFiles") }) : (() => {
-									// 文件分组：工作区根下的直接文件平铺；子文件夹里的文件归入文件夹节点
-									// （文件夹可展开查看内部文件）；文件/文件夹多时整体滚动显示
+									// File grouping: files directly under the workspace root are listed flat, while
+									// files in subfolders are collected under an expandable folder node; the whole
+									// list scrolls when there are many
 									const wsRoots = (workspaceItems ?? []).map((ws) => ws.path).filter((p) => typeof p === "string").map((p) => p.replace(/[\\/]+$/, ""));
 									const groups = new Map();
 									const groupFullDirs = new Map();
@@ -968,8 +999,8 @@ window.__ModuleLoader__.load({
 											}
 										}
 										if (root === "") {
-											// 匹配不到工作区根（文件在注册工作区之外）：兜底显示文件名，
-											// 绝不直接显示完整路径
+											// No workspace root matched (the file lies outside every registered
+											// workspace): fall back to the file name and never print the full path
 											directFiles.push({ ...file, relName: baseName(file.path) });
 											continue;
 										}
@@ -977,7 +1008,7 @@ window.__ModuleLoader__.load({
 										const sepIdx = Math.max(rel.lastIndexOf("\\"), rel.lastIndexOf("/"));
 										if (sepIdx > 0) {
 											const folder = rel.slice(0, sepIdx);
-											// 记录文件夹完整路径（Show paths开关开启时与文件一致显示完整路径）
+											// Record the folder's full path (shown, like files, when Show paths is on)
 											const list = groups.get(folder) ?? [];
 											list.push({ ...file, relName: rel.slice(sepIdx + 1) });
 											groups.set(folder, list);
@@ -995,7 +1026,8 @@ window.__ModuleLoader__.load({
 													style: { display: "contents" },
 													children: [
 														(0, react_jsx_runtime.jsxs)("label", {
-															// 与文件行完全同款：label.selectAll（同高同样式，杜绝间距差异）
+															// Identical to a file row: label.selectAll, same height and style, so no
+													// spacing difference creeps in
 															className: pcss.selectAll,
 															children: [(0, react_jsx_runtime.jsx)("input", { type: "checkbox", checked: flist.every((f) => selectedFiles.has(f.path)), onChange: () => toggleFolderFiles(flist), title: t("selectAll") }), (0, react_jsx_runtime.jsx)("button", {
 																type: "button",
@@ -1024,7 +1056,7 @@ window.__ModuleLoader__.load({
 												children: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Button, {
 													variant: "outline",
 													disabled: fileSelectedCount === 0 || fileDeleting,
-													onClick: () => requestFileDelete(row), // m9: 先弹确认再删除
+													onClick: () => requestFileDelete(row), // m9: confirm before deleting
 													children: fileDeleting ? t("fileDeleting") : `${t("fileDelete")}（${fileSelectedCount}）`
 												})
 											})
@@ -1032,7 +1064,8 @@ window.__ModuleLoader__.load({
 									});
 								})(),
 								(0, react_jsx_runtime.jsx)("div", { className: pcss.detailSection, children: t("lineage") }),
-								// 关联对话区只显示子代理个数（父会话/分叉会话不在详情里列出）
+								// The related-conversations area shows only the subagent count (parent and
+								// forked sessions are not listed in the details)
 								(0, react_jsx_runtime.jsxs)("div", { className: pcss.lineageRow, children: [(0, react_jsx_runtime.jsx)("span", { className: pcss.detailLabel, children: t("subagent") }), (0, react_jsx_runtime.jsx)("span", { children: `（${subagents.length}）` })] })
 							]
 						})
@@ -1248,7 +1281,8 @@ window.__ModuleLoader__.load({
 										children: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconTriangleRightFill14, {})
 									})]
 								}), subagentDetailOpen && (() => {
-									// 只显示子代理（选中会话之外的代理）：所有后代（含孙级）都列出
+									// Show subagents only (agents other than the selected session): every
+									// descendant, grandchildren included
 									const kidIds = [...allDeleteSubagentIds];
 									const rows = [];
 									if (kidIds.length === 0) {
@@ -1291,7 +1325,8 @@ window.__ModuleLoader__.load({
 											children: [(0, react_jsx_runtime.jsx)("input", { type: "checkbox", checked: showFilePaths, onChange: (e) => setShowFilePaths(e.target.checked), style: { cursor: "pointer", margin: 0 } }), "Show paths"]
 										})]
 									}), (0, react_jsx_runtime.jsx)("div", { style: { fontSize: 11, color: "var(--dsw-alias-label-tertiary)", marginBottom: 2 }, children: t("deleteDetailFilesNote") }), [...allDeleteDirs].length === 0 && [...allDeleteFilePaths].length === 0 ? (0, react_jsx_runtime.jsx)("div", { style: { fontSize: 11, color: "var(--dsw-alias-label-tertiary)" }, children: detailLoading ? t("loading") : t("deleteDetailNone") }) : (() => {
-										// 树形分组：文件归入其父目录（文件夹节点可展开查看内部文件）
+										// Tree grouping: each file sits under its parent directory (folder nodes expand
+										// to reveal what is inside)
 										const fileGroups = new Map();
 										const directFiles = [];
 										for (const fp of [...allDeleteFilePaths]) {
@@ -1311,7 +1346,7 @@ window.__ModuleLoader__.load({
 												style: { display: "contents" },
 												children: [
 													(0, react_jsx_runtime.jsxs)("label", {
-														// 与文件行完全同款：label.selectAll
+														// Identical to a file row: label.selectAll
 														className: pcss.selectAll,
 														children: [(0, react_jsx_runtime.jsx)("input", { type: "checkbox", checked: deleteFilePaths.has(dir), disabled: deleting, onChange: (e) => setDeleteFilePaths((prev) => { const next = new Set(prev); if (e.target.checked) next.add(dir); else next.delete(dir); return next; }) }), (0, react_jsx_runtime.jsx)("button", {
 															type: "button",
@@ -1371,7 +1406,7 @@ window.__ModuleLoader__.load({
 							children: archiving ? t("archiving") : t("archive")
 						})] })
 					}),
-					// m9: 文件删除确认弹窗
+					// m9: file-delete confirmation dialog
 					(0, react_jsx_runtime.jsxs)(_deepseek_ai_dsh_client_ui_primitives.Modal, {
 						open: fileConfirmOpen,
 						onClose: () => { if (!fileDeleting) setFileConfirmOpen(false); },

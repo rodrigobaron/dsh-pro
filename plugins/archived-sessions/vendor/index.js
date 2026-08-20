@@ -23,9 +23,10 @@ import { spawn } from "node:child_process";
 import { homedir } from "node:os";
 
 const name = "dsh-archived-sessions";
-// agentLoop 是可选能力（缺失时删除走 409 降级），故意不进 inject：
-// cordis 的 inject 是必需依赖声明（缺失会阻塞插件启动），而 ctx.get
-// 本身是无需声明的宽容读取，正适合这种"有则用、无则降级"的场景。
+// agentLoop is an optional capability (when absent, delete degrades to 409),
+// so it is deliberately kept out of inject: cordis inject declares REQUIRED
+// dependencies (a missing one blocks startup), while ctx.get is a tolerant
+// read needing no declaration — exactly right for use-if-present.
 const inject = ["webServer", "sessions", "sessionPersistence", "workspaceRegistry", "agents"];
 /** Empty configuration schema: this plugin owns no loader config. */
 const Config = z.object({});
@@ -71,10 +72,12 @@ function encodeSegment(raw) {
 /** The DSH home directory (matches `dshHomePath('sessions')`). */
 function dshHome() {
 	const raw = process.env.DSH_HOME;
-	// 空白 DSH_HOME 视为未设置（与官方 resolveDshHome 一致）；~ 前缀按用户主目录展开；结果归一为绝对路径
+	// A blank DSH_HOME counts as unset (matching the official resolveDshHome); a
+	// leading ~ expands to the home directory; the result is normalized absolute.
 	const configured = raw !== void 0 && raw.trim().length > 0 ? raw.trim() : void 0;
 	let base = configured ?? join(homedir(), ".dsh");
-	// m18: 统一按 "~" 前缀展开（覆盖 "~"、"~/"、"~\"、"~foo" 全部形态，与官方 resolveDshHome 语义对齐）
+	// m18: expand every "~" form ("~", "~/", "~\", "~foo") the same way, aligned
+	// with the official resolveDshHome semantics
 	if (base === "~") base = homedir();
 	else if (base.startsWith("~/") || base.startsWith("~\\")) base = join(homedir(), base.slice(2));
 	else if (base.startsWith("~")) base = join(homedir(), base.slice(1));
@@ -85,15 +88,17 @@ function sessionsRoot() {
 	return join(dshHome(), "sessions");
 }
 /** Resolve a session's storage directory from its header (project key + encoded id).
- * m6: 无 cwd 会话落在官方 `_no-cwd` 布局（与 dsh-session-persistence-jsonl 的
- * projectDir 对齐），open-folder 对这类会话不再报"没有关联的工作目录"。 */
+ * m6: a session without a cwd lands in the official `_no-cwd` layout (aligned
+ * with dsh-session-persistence-jsonl's projectDir), so open-folder no longer
+ * reports "no associated working directory" for it. */
 function sessionDirFor(meta) {
 	const cwd = typeof meta?.cwd === "string" && meta.cwd !== "" ? meta.cwd : void 0;
 	if (cwd === void 0) return join(sessionsRoot(), "_no-cwd", encodeSegment(meta.id));
 	return join(sessionsRoot(), projectKey(cwd), encodeSegment(meta.id));
 }
 /** Open a directory in the OS file manager (cross-platform, fire-and-forget).
- * s7: 简单节流——同一目录 500ms 内重复打开只放行一次，避免狂点按钮弹出多个窗口。 */
+ * s7: simple throttle — repeated opens of the same directory within 500ms are
+ * collapsed, so hammering the button cannot spawn a pile of windows. */
 let lastOpenedDir = "";
 let lastOpenedAt = 0;
 function openInFileManager(dir) {
@@ -110,7 +115,8 @@ function openInFileManager(dir) {
 			stdio: "ignore",
 			...(process.platform === "win32" ? { shell: false } : {})
 		});
-		// 以 'error' 与 'spawn' 竞速：命令缺失/启动失败时如实上报，而不是无条件成功
+		// Race 'error' against 'spawn': report honestly when the command is missing
+		// or fails to start, rather than reporting unconditional success
 		let settled = false;
 		child.once("error", (error) => {
 			if (settled) return;
@@ -174,7 +180,8 @@ function isTrustedApiRequest(request) {
 const ARCHIVED_API_METHODS = new Set(["details", "delete", "delete-file", "open-folder", "archive", "unarchive"]);
 const MAX_JSON_BODY_BYTES = 1024 * 1024;
 async function readJsonBody(req) {
-	// m16: 非 JSON content-type 直接 415（允许缺失——无 body 的调用方不强制）
+	// m16: a non-JSON content-type is 415 outright (absent is allowed — callers
+	// with no body are not required to send one)
 	const contentType = header(req.headers, "content-type");
 	if (contentType !== void 0 && !/^application\/json\b/i.test(contentType.trim())) {
 		const error = new Error("content-type must be application/json");
@@ -225,7 +232,8 @@ async function lenientInspect(persistence, sessionId, signal) {
 		if (typeof persistence.readRaw !== "function") throw error;
 		const raw = await persistence.readRaw(sessionId, signal);
 		if (raw === void 0) {
-			// 会话不存在：inspect/readRaw 双双找不到，转成明确 404（原始错误无 status 会落到 500）
+			// Session missing: inspect and readRaw both come up empty, so turn it into an
+			// explicit 404 (the raw error carries no status and would fall through to 500)
 			const notFound = new Error("No record found for this session (the session does not exist)");
 			notFound.status = 404;
 			notFound.code = "session-not-found";
@@ -246,8 +254,9 @@ async function lenientInspect(persistence, sessionId, signal) {
 	}
 }
 
-// M8: 详情响应上限——fetches 只保留前 50 条、files 只保留前 200 条，
-// 防止单会话数万次 fetch/write 时详情 JSON 膨胀到数十 MB 卡死浏览器。
+// M8: cap the details response — keep only the first 50 fetches and the first
+// 200 files, so a session with tens of thousands of fetches/writes cannot grow
+// the details JSON to tens of MB and lock up the browser.
 const MAX_FETCHES = 50;
 const MAX_FILES = 200;
 
@@ -265,7 +274,8 @@ async function buildDetails(ctx, sessionId) {
 		if (persistence === void 0) throw new Error("session persistence is not available");
 		const inspected = await lenientInspect(persistence, sessionId);
 		if (inspected.meta === void 0) {
-			// 会话不存在：明确 404（persistence.inspect 抛的原始错误无 status，会落到 500）
+			// Session missing: explicit 404 (the error persistence.inspect throws carries
+			// no status and would fall through to 500)
 			const error = new Error("No record found for this session (the session does not exist)");
 			error.status = 404;
 			error.code = "session-not-found";
@@ -347,16 +357,19 @@ async function buildDetails(ctx, sessionId) {
 		}
 	}
 	stats.turns = turnSeen.size;
-	// NOTE: step 去重依赖"step 编号全局递增"这一约定（真实会话 1..N 连续）。
-	// 若未来 step 编号改为按 turn 重置，去重会低估步数——届时改为统计
-	// step/start 事件条数即可。
+	// NOTE: step de-duplication relies on step numbers increasing globally (a real
+	// session runs 1..N without gaps). If step numbering is ever reset per turn,
+	// this would undercount — switch to counting step/start events instead.
 	stats.steps = stepSeen.size;
-	// M8: 截断响应体积——fetches 保留前 MAX_FETCHES 条（客户端渲染时同样截断），
-	// files 保留前 MAX_FILES 条；统计计数不受影响（toolCounts 仍是全量）。
+	// M8: truncate the response — keep the first MAX_FETCHES fetches (the client
+	// truncates when rendering too) and the first MAX_FILES files; the statistics
+	// are unaffected (toolCounts still covers everything).
 	if (stats.fetches.length > MAX_FETCHES) stats.fetches = stats.fetches.slice(0, MAX_FETCHES);
-	// files 列表来自事件记录（write/edit 的 file_path），是历史快照——物理删除后
-	// 记录仍在，会让详情面板/删除弹窗重复列出已删文件。这里 stat 过滤掉磁盘上
-	// 已不存在的路径（只检查前 MAX_FILES*2 个，避免大会话全量 stat 变慢）。
+	// The files list comes from the event log (write/edit file_path), so it is a
+	// historical snapshot: a physically deleted file still has its record, which
+	// would list it again in the details panel and delete dialog. stat filters out
+	// paths gone from disk (only the first MAX_FILES*2 are checked, so a large
+	// session does not pay for a full stat sweep).
 	const fileEntries = [...fileSet.entries()].slice(0, MAX_FILES * 2);
 	const fileExists = await Promise.all(fileEntries.map(([p]) => stat(p).then(() => true).catch(() => false)));
 	const files = fileEntries.filter((_, i) => fileExists[i]).map(([path, tool]) => ({ path, tool })).slice(0, MAX_FILES);
@@ -364,10 +377,11 @@ async function buildDetails(ctx, sessionId) {
 		parentSessionId: typeof meta?.parentSession === "string" ? meta.parentSession : null,
 		children: []
 	};
-	// M1: children 用 Set 去重——live 子会话同时命中 persistence.list() 与
-	// sessions.list() 两个来源时会重复出现；m2: list() 加 typeof 守卫，
-	// 换非 jsonl backend（无 list 方法）时不至于 500。
-	// children = 分叉子会话（非 subagent）；subagents = 子代理（origin === "subagent"）
+	// M1: children is a Set because a live child session appears in both
+	// persistence.list() and sessions.list(); m2: list() is typeof-guarded so a
+	// non-jsonl backend without a list method does not turn into a 500.
+	// children = forked child sessions (not subagents); subagents = subagent
+	// sessions (origin === "subagent")
 	const childrenSet = new Set();
 	const subagentSet = new Set();
 	if (persistence !== void 0 && typeof persistence.list === "function") {
@@ -401,10 +415,11 @@ async function buildDetails(ctx, sessionId) {
 	};
 }
 
-// -- registry 状态变更串行队列 ----------------------------------------------
-// workspaceRegistry 的 requireState+setState 是读-改-写原语，官方核心经内部
-// enqueueOperation 串行化；插件自己的 unarchive/fallback-delete 也走本队列，
-// 避免与并发归档/取消归档请求交错时丢失更新。
+// -- serialized queue for registry state changes ------------------------------
+// workspaceRegistry's requireState+setState is a read-modify-write pair, which
+// the official core serializes through its own enqueueOperation. This plugin's
+// unarchive and fallback-delete go through this queue for the same reason:
+// otherwise a concurrent archive/unarchive could interleave and lose an update.
 let mutationTail = Promise.resolve();
 function enqueueMutation(operation) {
 	const result = mutationTail.then(() => operation());
@@ -412,9 +427,12 @@ function enqueueMutation(operation) {
 	return result;
 }
 
-/** 向上清理空父目录（直到非空或到工作区根），避免删除文件后残留空文件夹。
- * stopSet = 工作区根集合（含真实路径）：清到根即停，根目录本身绝不删除。
- * 注意边界只认 stopSet——删除目标是工作区文件，不在 sessionsRoot 下。 */
+/** Prune empty parent directories upward (until one is non-empty or the
+ * workspace root is reached), so deleting a file leaves no empty shell behind.
+ * stopSet = the set of workspace roots (real paths included): pruning stops at a
+ * root and never removes the root itself.
+ * Note the boundary is stopSet alone — the delete target is a workspace file
+ * and does not live under sessionsRoot. */
 async function pruneEmptyDirs(dir, stopSet) {
 	let current = dirname(dir);
 	for (;;) {
@@ -451,8 +469,9 @@ async function deleteSessionSingle(ctx, sessionId, options = {}) {
 	const registry = ctx.get("workspaceRegistry");
 	const persistence = ctx.get("sessionPersistence");
 	const sessions = ctx.get("sessions");
-	// m1: 会话不存在时明确 404，而不是静默"成功"（用户会误以为已删除）。
-	// 运行中会话由调用方（deleteSession）先 409 拦截，这里只处理已停止的。
+	// m1: a missing session is an explicit 404, not a silent "success" the user
+	// would read as "deleted". A running session is rejected with 409 earlier by
+	// the caller (deleteSession); only stopped ones reach here.
 	const meta = await findSessionMeta(ctx, sessionId);
 	if (meta === void 0) {
 		const error = new Error("No record found for this session (the session does not exist)");
@@ -460,8 +479,9 @@ async function deleteSessionSingle(ctx, sessionId, options = {}) {
 		error.code = "session-not-found";
 		throw error;
 	}
-	// M2: detach 是 best-effort——单个 workspace 的 detachSession 失败（例如其
-	// requireState/setState 持久化异常）不应阻塞整个删除，记录后继续。
+	// M2: detach is best-effort — one workspace's detachSession failing (its
+	// requireState/setState persistence erroring, say) must not block the whole
+	// delete, so it is recorded and skipped.
 	for (const ws of registry?.list() ?? []) {
 		if (!ws.sessionIds.includes(sessionId)) continue;
 		try {
@@ -472,9 +492,10 @@ async function deleteSessionSingle(ctx, sessionId, options = {}) {
 	}
 	if (registry !== void 0 && typeof registry.requireState === "function" && typeof registry.setState === "function") {
 		await enqueueMutation(async () => {
-			// M3: 队列内读取最新 state（不基于外部缓存的旧快照计算写回）。
-			// 该会话在归档集中时，顺带清理指向已不存在会话的孤儿归档条目
-			// （并发 archive/unarchive/delete 跨队列交错可能残留此类条目）。
+			// M3: read the latest state inside the queue, never computing a write-back
+			// from a stale snapshot held outside it. While this session is in the archive
+			// set, orphaned entries pointing at sessions that no longer exist are swept
+			// too (concurrent archive/unarchive/delete across queues can leave them).
 			const state = registry.requireState();
 			if (!state.archivedSessionIds.includes(sessionId)) return;
 			const existing = new Set();
@@ -487,9 +508,10 @@ async function deleteSessionSingle(ctx, sessionId, options = {}) {
 		});
 	}
 	if (persistence !== void 0 && typeof persistence.locate === "function") {
-		// 细粒度文件删除：删勾选的文件/文件夹（产生的目录也删），然后删记录 log。
-		// 注意：details.files 是工作区产出文件（write/edit 的 file_path），
-		// 不在会话目录里——围栏校验用工作区根（与 deleteFile 一致），而非会话目录。
+		// Fine-grained file delete: remove the ticked files/folders (and directories
+		// that result), then the record log. Note details.files are workspace output
+		// files (write/edit file_path) and do NOT live in the session directory, so
+		// the fence is the workspace root (as in deleteFile), not the session dir.
 		if (Array.isArray(filePaths) && filePaths.length > 0) {
 			const location = persistence.locate(meta);
 			const root = sessionsRoot();
@@ -500,13 +522,13 @@ async function deleteSessionSingle(ctx, sessionId, options = {}) {
 				try {
 					rr = await realpath(rr);
 				} catch {
-					// 工作区根可能已被移动/删除：保留 resolve 结果
+					// The workspace root may have been moved or deleted: keep the resolved path
 				}
 				rootResolvedSet.add(rr.replace(/[\\/]+$/, ""));
 			}
 			for (const p of filePaths) {
 				const resolved = resolve(p);
-				// 校验目标在某个工作区内（防越界删除任意路径）
+				// Prove the target sits inside some workspace (so no arbitrary path is removed)
 				let allowed = false;
 				let matchedRoot = "";
 				for (const wroot of workspaceRoots) {
@@ -514,7 +536,7 @@ async function deleteSessionSingle(ctx, sessionId, options = {}) {
 					try {
 						rootResolved = await realpath(rootResolved);
 					} catch {
-						// 工作区根可能已被移动/删除：保留 resolve 结果
+						// The workspace root may have been moved or deleted: keep the resolved path
 					}
 					rootResolved = rootResolved.replace(/[\\/]+$/, "");
 					if (rootResolved !== "" && resolved.startsWith(rootResolved + sep) && resolved !== rootResolved) {
@@ -524,16 +546,16 @@ async function deleteSessionSingle(ctx, sessionId, options = {}) {
 					}
 				}
 				if (!allowed) continue;
-				// 文件或文件夹都删（文件夹递归；删除后清理空父目录）
+				// Files and folders alike (folders recursively; empty parents pruned after)
 				try {
 					const info = await stat(resolved);
 					await rm(resolved, { force: true, maxRetries: 3, recursive: info.isDirectory() });
 					await pruneEmptyDirs(resolved, rootResolvedSet);
 				} catch {
-					// 目标不存在（已删/未落地）：忽略
+					// Target absent (already deleted, or never written): ignore
 				}
 			}
-			// 删记录 log（保留其余文件）
+			// Delete the record log (leaving every other file)
 			const logPath = location !== void 0 && typeof location.path === "string" ? location.path : void 0;
 			if (logPath !== void 0) {
 				const relLog = relative(root, logPath);
@@ -547,7 +569,8 @@ async function deleteSessionSingle(ctx, sessionId, options = {}) {
 			}
 			return;
 		}
-		// deleteFiles=false：只删记录文件（log），保留会话目录里的下载/产出文件
+		// deleteFiles=false: delete only the record log, keeping downloads and output
+		// files in the session directory
 		if (deleteFiles === false) {
 			const location = persistence.locate(meta);
 			if (location !== void 0 && typeof location.path === "string") {
@@ -557,7 +580,7 @@ async function deleteSessionSingle(ctx, sessionId, options = {}) {
 				if (insideRoot) {
 					await rm(location.path, { force: true, maxRetries: 3 });
 				} else if (persistence.remove !== void 0 && typeof persistence.remove === "function") {
-					// 记录路径异常（第三方 backend）：退回官方 remove
+					// Record path unusable (third-party backend): fall back to the official remove
 					await persistence.remove(sessionId);
 				}
 			}
@@ -588,7 +611,8 @@ async function deleteSessionSingle(ctx, sessionId, options = {}) {
 	}
 }
 
-/** 递归收集 sessionId 的所有后代子代理会话 id（含孙级及更深）。 */
+/** Recursively collect every descendant subagent session id of sessionId,
+ * including grandchildren and deeper. */
 async function collectDescendants(ctx, sessionId) {
 	const persistence = ctx.get("sessionPersistence");
 	const sessions = ctx.get("sessions");
@@ -620,11 +644,13 @@ async function collectDescendants(ctx, sessionId) {
 }
 
 /** Permanently delete one session (live-agent teardown + single-session removal).
- * M7 note: DSH host 端没有公开的"当前会话"API（sessions store 的 current 是
- * 浏览器端概念，host 侧 services 无对等物；agents 的 selection.current 是 agent
- * 内部状态），因此 host 端无法可靠拒绝删除"当前打开的会话"。保护策略：运行中
- * 会话 409 拒绝（下方）+ 客户端禁选 current 行 + README 说明本机进程可通过
- * 直接调用 API 删除当前会话的风险（与官方 deleteSession 行为一致）。 */
+ * M7 note: the DSH host exposes no "current session" API (the sessions store's
+ * current is a browser-side concept with no host-side equivalent, and agents'
+ * selection.current is agent-internal state), so the host cannot reliably refuse
+ * to delete "the session you have open". The protection is instead: a running
+ * session is refused with 409 (below), the client disables the current row, and
+ * the README states that a local process calling the API directly can still
+ * delete the current session — matching the official deleteSession. */
 async function deleteSession(ctx, sessionId, options = {}) {
 	const { cascade = false, deleteFiles = true, subagentIds, filePaths } = options;
 	const agents = ctx.get("agents");
@@ -660,12 +686,15 @@ async function deleteSession(ctx, sessionId, options = {}) {
 			}
 		}
 	}
-	// 永远走"只删自己"路径：registry.deleteSession（补丁版）会级联删除
-	// subagent 子会话，而本插件默认不级联——除非用户显式勾选（cascade 或 subagentIds）。
-	// subagentIds 为详情面板细粒度勾选的子代理集合；cascade=true 为全选后代。
+	// Always take the delete-only-myself path: registry.deleteSession (the patched
+	// build) cascades into subagent children, and this plugin does not cascade by
+	// default unless the user ticks it (cascade, or subagentIds). subagentIds is
+	// the fine-grained set from the details panel; cascade=true means all
+	// descendants.
 	const descendants = Array.isArray(subagentIds) && subagentIds.length > 0 ? subagentIds : (cascade ? await collectDescendants(ctx, sessionId) : []);
 	for (const descendant of descendants) {
-		// 子代理的文件删除沿用主会话选项；指定了 filePaths 时子代理只删记录（保留文件）
+		// Subagents inherit the parent's file-delete option; when filePaths is given,
+		// a subagent deletes only its record and keeps its files
 		await deleteSessionSingle(ctx, descendant, { deleteFiles: Array.isArray(filePaths) && filePaths.length > 0 ? false : deleteFiles });
 	}
 	await deleteSessionSingle(ctx, sessionId, { deleteFiles, filePaths });
@@ -676,20 +705,25 @@ async function deleteSession(ctx, sessionId, options = {}) {
  * workspace root (never the root itself — a recursive rm on the root would
  * erase the whole project directory).
  *
- * M6: 只允许删除普通文件（lstat 拒绝目录，rm 非递归）；带 sessionId 时额外
- * 校验 path 必须属于该会话 buildDetails.files 的产出文件列表（防同源脚本
- * 删除工作区任意文件）。m3: 工作区根也经 realpath，避免符号链接/大小写
- * 别名导致合法删除被误拒。m4: 尾部分隔符规范化，避免 `root + sep` 双分隔符。 */
+ * M6: only regular files may be deleted (lstat refuses directories, rm is not
+ * recursive); when a sessionId is given, path must additionally belong to that
+ * session's buildDetails.files output list, so a same-origin script cannot
+ * delete arbitrary workspace files. m3: workspace roots go through realpath too,
+ * so a symlink or case alias cannot make a legitimate delete look out of bounds.
+ * m4: trailing separators are normalized, avoiding a doubled `root + sep`. */
 async function deleteFile(ctx, path, sessionId) {
 	const resolved = resolve(path);
 	let target = resolved;
 	try {
-		// 解析符号链接/大小写别名：目标若存在则以真实路径做围栏校验（工作区内指向外部的链接会被拒绝）
+		// Resolve symlinks and case aliases: an existing target is fenced by its real
+		// path, so a link inside the workspace pointing outside it is refused
 		target = await realpath(resolved);
 	} catch {
-		// 目标可能已被删除（最后一次同步前）：保留 resolve 结果，围栏校验仍然生效
+		// The target may already be gone (deleted since the last sync): keep the
+		// resolved path, and the fence check still applies
 	}
-	// M6: 只允许删除普通文件——目录走递归 rm 会误删整棵目录树
+	// M6: regular files only — a directory would take rm recursive with it and
+	// destroy the whole tree
 	try {
 		const info = await stat(target);
 		if (info.isDirectory()) {
@@ -700,9 +734,11 @@ async function deleteFile(ctx, path, sessionId) {
 		}
 	} catch (error) {
 		if (error?.code === "not-a-file") throw error;
-		// 目标不存在（最后一次同步前已删）：继续围栏校验，rm force 幂等
+		// Target absent (deleted since the last sync): still fence-check it, and rm
+		// force is idempotent
 	}
-	// M6: 归属校验——带 sessionId 时 path 必须是该会话产出文件列表之一
+	// M6: ownership check — with a sessionId, path must be one of that session's
+	// output files
 	if (typeof sessionId === "string" && sessionId !== "") {
 		const details = await buildDetails(ctx, sessionId);
 		const known = new Set();
@@ -721,12 +757,14 @@ async function deleteFile(ctx, path, sessionId) {
 	for (const root of roots) {
 		let rootResolved = resolve(root);
 		try {
-			// m3: 根也解析真实路径，与 target（已 realpath）在同一坐标系比较
+			// m3: resolve the root's real path too, so it is compared with target (already
+			// realpath'd) in the same coordinate system
 			rootResolved = await realpath(rootResolved);
 		} catch {
-			// 工作区根可能已被移动/删除：保留 resolve 结果
+			// The workspace root may have been moved or deleted: keep the resolved path
 		}
-		// m4: 去掉尾部重复分隔符（`C:\` 与 `C:\\` 均归一为 `C:\`）
+		// m4: strip duplicated trailing separators (`C:\` and `C:\\` both normalize
+		// to `C:\`)
 		rootResolved = rootResolved.replace(/[\\/]+$/, "");
 		if (rootResolved === "") continue;
 		rootResolvedSet.add(rootResolved);
@@ -741,7 +779,8 @@ async function deleteFile(ctx, path, sessionId) {
 		throw error;
 	}
 	await rm(target, { recursive: false, force: true });
-	// 与 delete 的 filePaths 分支保持一致：删完向上清理空父目录（直到非空或工作区根）
+	// Consistent with delete's filePaths branch: prune empty parents upward after
+	// removal (until one is non-empty, or the workspace root)
 	await pruneEmptyDirs(target, rootResolvedSet);
 	return { path: target, deleted: true };
 }
@@ -762,7 +801,8 @@ async function openSessionFolder(ctx, sessionId) {
 		error.code = "no-cwd";
 		throw error;
 	}
-	// M10: 目录不存在时给友好错误，避免操作系统弹原生错误框
+	// M10: a friendly error when the directory is missing, so the OS does not throw
+	// a native dialog
 	try {
 		await stat(dir);
 	} catch {
@@ -784,7 +824,8 @@ async function archiveSession(ctx, sessionId) {
 		error.code = "unsupported";
 		throw error;
 	}
-	// 会话不存在时给明确 404（官方 archiveSession 对不存在会话抛无 status 的错误，会落到 500）
+	// Explicit 404 for a missing session (the official archiveSession throws an
+	// error with no status, which would fall through to 500)
 	const meta = await findSessionMeta(ctx, sessionId);
 	if (meta === void 0) {
 		const error = new Error("No record found for this session (the session does not exist)");
@@ -802,9 +843,11 @@ async function archiveSession(ctx, sessionId) {
 * (`requireState` + `setState`), so it works on a stock Harness without
 * any core patch. The read-modify-write runs inside the plugin's serialized
 * mutation queue so concurrent archive/unarchive requests cannot lose updates.
-* M3 note: 插件 mutationTail 队列与官方 archiveSession 的 enqueueOperation 是
-* 两套独立队列，极端并发（同一毫秒内 archive 与 unarchive/delete 交错）仍可能
-* 丢失更新；删除操作已顺带清理孤儿归档条目自愈，残余窗口见 README 并发说明。
+* M3 note: this plugin's mutationTail queue and the official archiveSession's
+* enqueueOperation are two independent queues, so extreme concurrency (an archive
+* interleaving with an unarchive or delete within the same millisecond) can still
+* lose an update. Delete self-heals by sweeping orphaned archive entries as it
+* goes; the remaining window is described in the README's concurrency notes.
 */
 async function unarchiveSession(ctx, sessionId) {
 	const registry = ctx.get("workspaceRegistry");
@@ -814,7 +857,7 @@ async function unarchiveSession(ctx, sessionId) {
 		error.code = "unsupported";
 		throw error;
 	}
-	// 会话不存在时给明确 404，与 archive/delete/details 语义一致
+	// Explicit 404 for a missing session, consistent with archive/delete/details
 	const meta = await findSessionMeta(ctx, sessionId);
 	if (meta === void 0) {
 		const error = new Error("No record found for this session (the session does not exist)");
@@ -852,7 +895,8 @@ function apply(ctx) {
 				writeJson(res, 404, { ok: false, error: { code: "not-found", message: "unknown archived API method" } });
 				return;
 			}
-			// 方法白名单：未知 method 优先返回 404，而不是落到参数校验的 400
+			// Method allowlist: an unknown method is a 404 rather than falling through to
+			// the 400 from argument validation
 			if (!ARCHIVED_API_METHODS.has(method)) {
 				writeJson(res, 404, { ok: false, error: { code: "not-found", message: `unknown archived API method "${method}"` } });
 				return;
@@ -865,14 +909,16 @@ function apply(ctx) {
 						writeJson(res, 400, { ok: false, error: { code: "bad-request", message: "path is required" } });
 						return;
 					}
-					// M6: 归属校验需要 sessionId——由客户端从详情 files 列表发起时必带
+					// M6: the ownership check needs sessionId — the client always sends it when
+					// acting from the details files list
 					const ownerSessionId = typeof payload.sessionId === "string" ? payload.sessionId : "";
 					writeOk(res, await deleteFile(ctx, path, ownerSessionId));
 					return;
 				}
 				const sessionId = typeof payload.sessionId === "string" ? payload.sessionId : "";
 				if (sessionId === "" || sessionId.length > 200) {
-					// m17: sessionId 限长，防超长字符串参与全量 list 比对浪费资源
+					// m17: bound the sessionId length, so an overlong string cannot burn resources
+					// in a full list comparison
 					writeJson(res, 400, { ok: false, error: { code: "bad-request", message: sessionId === "" ? "sessionId is required" : "sessionId is too long" } });
 					return;
 				}
@@ -883,7 +929,8 @@ function apply(ctx) {
 					// aborted". Detail reads are bounded enough to run uncancelled.
 					writeOk(res, await buildDetails(ctx, sessionId));
 				} else if (method === "delete") {
-					// subagentIds/filePaths: 详情面板细粒度勾选；cascade/deleteFiles 为全选快捷方式
+					// subagentIds/filePaths: the details panel's fine-grained ticks;
+					// cascade/deleteFiles are the select-all shortcuts
 					writeOk(res, await deleteSession(ctx, sessionId, {
 						cascade: payload.cascade === true,
 						deleteFiles: payload.deleteFiles !== false,
