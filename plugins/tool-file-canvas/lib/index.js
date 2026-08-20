@@ -34,6 +34,9 @@ const SKILL_BODY = [
   "source code, Markdown, HTML, images, PDFs, or data files. It renders the file with",
   "syntax highlighting or a real preview in a side panel.",
   "",
+  "The panel opens by itself when the tool succeeds — the user does not have to click",
+  "anything. Say the file is open, not that it is available to open.",
+  "",
   "## show_file is not read",
   "",
   "`read` pulls a file into YOUR context so you can reason about it. `show_file` puts the",
@@ -109,7 +112,7 @@ function apply(ctx) {
       render: (_args, value) => [
         {
           type: "text",
-          text: `Showed ${value.path} (${value.type}${value.language ? `/${value.language}` : ""}, ${value.size} bytes${value.truncated ? ", truncated in the artifact preview" : ""}) to the user.`,
+          text: `Opened ${value.path} in the artifact side panel (${value.type}${value.language ? `/${value.language}` : ""}, ${value.size} bytes${value.truncated ? ", truncated in the preview" : ""}). The panel is now showing it, so tell the user it is open rather than asking them to click anything.`,
         },
       ],
       presentationMeta: (_args, value) => value,
