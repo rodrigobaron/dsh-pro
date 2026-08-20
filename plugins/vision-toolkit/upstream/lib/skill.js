@@ -13,8 +13,8 @@ export const VISION_SKILLS_CONTENT = readFileSync(new URL('../assets/skill/SKILL
 /** Runtime skill registration mounted only after every native tool is ready. */
 export const VISION_SKILLS_SKILL = {
     name: VISION_SKILLS_NAME,
-    description: '把截图或设计图还原为 UI（网页、应用界面或组件），生成 HTML/CSS 或项目现有前端代码；也支持图片问答、长截图/聊天记录 OCR、元素定位与盘点、裁剪、前景提取、像素对比、取色、SVG 描摹和 HTML 转截图。当任务涉及图片理解、UI 还原/重建（rebuild or restore a UI from a screenshot）、视觉回归、像素坐标、基于截图的 GUI 操作、可复用图片/SVG 素材、图表还原或长截图 OCR 时使用。',
-    whenToUse: '任务依赖图片文字/内容、像素坐标、截图转 UI 重建、视觉回归、可复用图片/SVG 素材、图表还原、基于截图的 GUI 操作或长截图 OCR 时使用。',
+    description: 'Restore a UI (a web page, an app screen, or a component) from a screenshot or design mock, producing HTML/CSS or code in the project\'s existing frontend; also supports image Q&A, OCR of long screenshots and chat logs, element grounding and inventory, cropping, foreground extraction, pixel diff, colour picking, SVG tracing, and HTML-to-screenshot. Use when the task involves understanding an image, rebuilding or restoring a UI from a screenshot, visual regression, pixel coordinates, screenshot-driven GUI actions, reusable image or SVG assets, chart reconstruction, or OCR of a long screenshot.',
+    whenToUse: 'Use when the task depends on text or content inside an image, pixel coordinates, rebuilding a UI from a screenshot, visual regression, reusable image or SVG assets, chart reconstruction, screenshot-driven GUI actions, or OCR of a long screenshot.',
     source: 'runtime',
     resourceBase: {
         kind: 'directory',

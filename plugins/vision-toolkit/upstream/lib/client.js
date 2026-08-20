@@ -1288,14 +1288,14 @@ function imageFiles(data) {
 /**
  * The selector label the model picker currently shows, or '' when none is
  * readable. Matches the host ModelSelect trigger aria-labels ("Select model,
- * current …" / "选择模型，当前 …"); any other label wording falls back to the
+ * current …"); any other label wording falls back to the
  * session-header verdict, which is stale until the next request.
  */
 function currentModelLabel() {
     const buttons = document.querySelectorAll('button[aria-label]');
     for (const button of buttons) {
         const label = button.getAttribute('aria-label') ?? '';
-        if (/select model|current model|选择模型/iu.test(label))
+        if (/select model|current model/iu.test(label))
             return label;
     }
     return '';
