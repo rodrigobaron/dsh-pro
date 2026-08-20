@@ -11,7 +11,12 @@ export const en = {
   'cmd.desc': 'Rewind the conversation to an earlier message',
   'title': 'Rewind conversation',
   'subtitle': 'Pick the message to rewind to. It and everything after it leave the conversation, and its text returns to the composer.',
-  'files': 'File changes are not undone. Code the agent wrote stays exactly as it is.',
+  'filesLead': 'Files are not reverted.',
+  'files': 'Code the agent wrote during a rewound turn stays exactly as it is \u2014 only the conversation is rewound.',
+  'time.now': 'just now',
+  'time.minutes': '{n}m ago',
+  'time.hours': '{n}h ago',
+  'time.days': '{n}d ago',
   'empty': 'No messages to rewind to yet.',
   'busy': 'The agent is running. Stop the current turn before rewinding.',
   'cancel': 'Cancel',
@@ -27,6 +32,7 @@ export const en = {
   'error.message-not-found': 'That message is no longer in the conversation.',
   'error.recall-rejected': 'The session refused that rewind point: {message}',
   'error.transport': 'The rewind request did not reach the server: {message}',
+  'error.rewind-unsupported': 'This DeepSeek Harness build cannot rewind: its session runtime has no recall support, which is core behaviour rather than something a plugin can add.',
   'error.unknown': 'The rewind failed: {message}',
 } satisfies Record<string, string>
 

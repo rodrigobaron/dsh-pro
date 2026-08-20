@@ -47,6 +47,26 @@ host = rewrite(host, 'path: "/recall",', 'path: "/rewind",', 'route path')
 // The one Chinese fragment in the host half is a parenthetical gloss in the
 // module docstring; this repository writes English only.
 host = rewrite(host, 'Message recall (撤回) for the DSH Web UI.', 'Message rewind for the DSH Web UI.', 'docstring gloss')
+// A capability check, because the failure is otherwise unreadable.
+//
+// `session.recall()` is core runtime support, not a plugin seam — upstream's
+// own README says so. It does not exist in @deepseek-ai/dsh-session rc.7, and
+// grepping rc.8 finds no match either, so no published harness has it. Without
+// this check the route reaches the call and returns the raw TypeError, which
+// reads as "Recall failed: agent.session.recall is not a function" and looks
+// like a bug in this plugin rather than a missing runtime feature.
+host = rewrite(
+  host,
+  '\t\t\ttry {\n\t\t\t\tconst logged = agent.session.recall(boundary);',
+  `\t\t\tif (typeof agent.session.recall !== "function") {
+\t\t\t\tsendJson(res, 501, errorBody("rewind-unsupported", "this DeepSeek Harness build has no session recall support, which is core runtime behaviour rather than something a plugin can provide", { sessionId }));
+\t\t\t\treturn;
+\t\t\t}
+\t\t\ttry {
+\t\t\t\tconst logged = agent.session.recall(boundary);`,
+  'session.recall capability check',
+)
+
 await writeFile(join(ROOT, 'lib', 'index.js'), host)
 
 // ── client half ──────────────────────────────────────────────────────────────

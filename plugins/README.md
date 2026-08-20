@@ -508,6 +508,24 @@ Two entry points, one route:
 Both POST `/rewind`, which appends a durable `session/recall` tombstone. The
 log keeps every event, so this survives a restart.
 
+### It does not work on any published harness
+
+`session.recall()` is core runtime support, not a plugin seam — upstream's own
+README says so. It does not exist in `@deepseek-ai/dsh-session@0.1.0-rc.7`, and
+a grep of rc.8 finds no match either, so **no published harness has ever
+shipped it**. Both entry points therefore fail at the final call.
+
+The host checks for it and answers `501 rewind-unsupported` with a plain
+explanation, rather than letting the route reach the call and return a raw
+`agent.session.recall is not a function` — which reads as a bug in this plugin
+instead of a missing runtime feature. The UI is complete and correct; the day
+the harness ships recall, both halves work unchanged.
+
+Doing it without core support would mean re-implementing rewind at the plugin
+level: keeping boundaries in durable per-session state, trimming messages in
+`agent/pre-step` before the model sees them, and filtering the transcript
+client-side. That is a different design, not a fix, and it is not built.
+
 **Files are not reverted.** Nothing on disk is touched, so code the agent wrote
 during a rewound turn stays exactly as it is. That is the one real difference
 from the rewind in Claude Code, which also restores the working tree, and the
@@ -522,6 +540,17 @@ Upstream does that faithfully and redoing it would be risk without benefit, but
 a prebuilt blob also cannot be extended. So the command and its dialog are
 ours, in a companion package, driving the same route. Same split as
 `tool-file-canvas` / `client-ui-file-canvas`.
+
+### Dialog layout
+
+The overlay slot renders inside the composer's container, so an absolutely
+positioned scrim covers the input area and the dialog opens at the bottom of
+the page. `position: fixed` escapes that anchor and centres it — which is
+exactly what the `/context` modal does, and for the same reason. The styles
+also use the harness's real `--dsw-alias-*` tokens (`bg-layer-1/2`,
+`border-l1`, `label-primary/secondary`, `interactive-bg-hover`,
+`brand-primary`); an invented token name falls through to its fallback colour
+and the dialog quietly stops following the theme.
 
 ### The node shape trap
 

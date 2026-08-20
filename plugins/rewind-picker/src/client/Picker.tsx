@@ -18,9 +18,20 @@ export interface PickerProps extends SessionStandardProps {
   useRewindPicker?: (select: (open: boolean) => boolean) => boolean
 }
 
+/** A coarse "how long ago" label; exactness is not the point when picking. */
+function relativeTime(time: number, t: Translate): string {
+  const seconds = Math.max(0, Math.round((Date.now() - time) / 1000))
+  if (seconds < 60) return t('time.now')
+  const minutes = Math.round(seconds / 60)
+  if (minutes < 60) return t('time.minutes', { n: minutes })
+  const hours = Math.round(minutes / 60)
+  if (hours < 24) return t('time.hours', { n: hours })
+  return t('time.days', { n: Math.round(hours / 24) })
+}
+
 /** Map a host error code to a dictionary key, falling back to the generic one. */
 function errorKey(code: string | undefined): string {
-  const known = ['session-not-found', 'subagent-owned', 'agent-busy', 'message-not-found', 'recall-rejected', 'transport']
+  const known = ['session-not-found', 'subagent-owned', 'agent-busy', 'message-not-found', 'recall-rejected', 'transport', 'rewind-unsupported']
   return known.includes(code ?? '') ? `error.${code}` : 'error.unknown'
 }
 
@@ -89,45 +100,54 @@ export function makePicker(
 
     const body = total === 0
       ? h('p', { className: 'dsh_rewind_empty' }, t('empty'))
-      : h('ul', { className: 'dsh_rewind_list' }, points.map((point, index) => h('li',
-          { key: point.seq, className: 'dsh_rewind_item' },
-          h('button', {
-            type: 'button',
-            className: 'dsh_rewind_btn',
-            'aria-pressed': selected === point.seq,
-            disabled: busy,
-            onClick: () => { setSelected(point.seq); setError(null) },
-          },
-            h('div', { className: 'dsh_rewind_meta' },
-              h('span', null, t('position', { n: total - index, total })),
-              index === 0 ? h('span', { className: 'dsh_rewind_badge' }, t('latest')) : null,
+      : h('ul', { className: 'dsh_rewind_list' }, points.map((point, index) => {
+          const ordinal = total - index
+          return h('li', { key: point.seq },
+            h('button', {
+              type: 'button',
+              className: 'dsh_rewind_row',
+              'aria-pressed': selected === point.seq,
+              disabled: busy,
+              onClick: () => { setSelected(point.seq); setError(null) },
+            },
+              h('span', { className: 'dsh_rewind_n' }, String(ordinal)),
+              h('span', { className: 'dsh_rewind_body' },
+                h('span', { className: 'dsh_rewind_meta' },
+                  h('span', null, t('position', { n: ordinal, total })),
+                  point.time !== undefined ? h('span', null, relativeTime(point.time, t)) : null,
+                  index === 0 ? h('span', { className: 'dsh_rewind_pill' }, t('latest')) : null,
+                ),
+                h('span', { className: point.text === '' ? 'dsh_rewind_text dsh_rewind_muted' : 'dsh_rewind_text' },
+                  point.text === '' ? t('untitled') : point.text),
+              ),
             ),
-            h('div', { className: point.text === '' ? 'dsh_rewind_text dsh_rewind_muted' : 'dsh_rewind_text' },
-              point.text === '' ? t('untitled') : point.text),
-          ),
-        )))
+          )
+        }))
 
     return h('div', {
-      className: 'dsh_rewind_scrim',
+      className: 'dsh_rewind_backdrop',
       role: 'presentation',
       onClick: (event: ReactNS.MouseEvent) => { if (event.target === event.currentTarget) close() },
     },
-      h('div', { className: 'dsh_rewind_dialog', role: 'dialog', 'aria-modal': true, 'aria-label': t('title') },
+      h('div', { className: 'dsh_rewind_card', role: 'dialog', 'aria-modal': true, 'aria-label': t('title') },
         h('div', { className: 'dsh_rewind_head' },
-          h('h2', { className: 'dsh_rewind_title' }, t('title')),
-          h('p', { className: 'dsh_rewind_subtitle' }, t('subtitle')),
+          h('div', { className: 'dsh_rewind_headrow' },
+            h('span', { className: 'dsh_rewind_title' }, t('title')),
+            h('button', { type: 'button', className: 'dsh_rewind_close', onClick: close, 'aria-label': t('close') }, '\u00d7'),
+          ),
+          h('p', { className: 'dsh_rewind_sub' }, t('subtitle')),
           // Stated up front, not in a tooltip: this is the one expectation a
           // rewind feature reliably breaks.
-          h('p', { className: 'dsh_rewind_files' }, t('files')),
+          h('p', { className: 'dsh_rewind_note' }, h('b', null, t('filesLead')), ' ', t('files')),
         ),
-        running ? h('p', { className: 'dsh_rewind_error' }, t('busy')) : null,
+        running ? h('p', { className: 'dsh_rewind_alert' }, t('busy')) : null,
         body,
-        error !== null ? h('p', { className: 'dsh_rewind_error' }, error) : null,
+        error !== null ? h('p', { className: 'dsh_rewind_alert' }, error) : null,
         h('div', { className: 'dsh_rewind_foot' },
-          h('button', { type: 'button', className: 'dsh_rewind_action', onClick: close, disabled: busy }, t('cancel')),
+          h('button', { type: 'button', className: 'dsh_rewind_btn', onClick: close, disabled: busy }, t('cancel')),
           h('button', {
             type: 'button',
-            className: 'dsh_rewind_action dsh_rewind_primary',
+            className: 'dsh_rewind_btn dsh_rewind_primary',
             disabled: busy || running || selected === null,
             onClick: () => { void confirm() },
           }, busy ? t('working') : t('confirm')),
