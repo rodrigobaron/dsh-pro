@@ -23,6 +23,7 @@ preset is default.
 | `archived-sessions` | a session manager in Settings: browse, archive, and delete conversations |
 | `vision-toolkit` | vision skills for the agent: image Q&A, OCR, grounding, pixel diff |
 | `browser` | browser skills for the agent: open pages, read, click, fill, screenshot |
+| `at-file` | `@path` references in the composer: a workspace path picker and filter settings |
 
 ## Adding a plugin
 
@@ -216,6 +217,51 @@ case is falling back to system Chrome.
   entering personal data, downloading, granting a permission — is written as
   ask-the-user-first.
 
+## The @ path picker
+
+Type `@` in the composer to search the workspace and insert a path. Choosing a
+result leaves the path visible in the draft and in a reference bar above it.
+
+The point is what it does **not** do. It never reads the file. Before the agent
+steps, the plugin checks the path still exists inside the workspace and adds one
+line:
+
+```xml
+<workspace-reference path="docs/spec.pdf" kind="file" />
+```
+
+That is the whole payload — a path and a kind. The agent reads the file with
+`read`, looks at it with `read_image`, or shows it to you with `show_file`, and
+does so only if the task needs it. A 40 MB CSV costs the same as a one-line
+config, and referencing ten files costs ten lines.
+
+Pasted `@path` text stays plain text by default, so pasting a shell command
+does not silently create references. **Settings -> File mentions** turns that
+off, and holds the filename filters (exact or regex, global or per-workspace).
+
+### Naming
+
+The Typert identities are renamed to `@my-dsh/at-file`. The registry rejects
+duplicate package-face keys and duplicate invocation ids, so a fork keeping
+upstream's `dsh-at-file` keys could not be installed beside the original. Both
+halves build from one `src/contract.ts`, so they cannot drift apart.
+
+One identity is deliberately left alone —
+`@deepseek-ai/dsh-session/types#SessionId`. It has to equal the agent lookup
+provider's wire identity, and it is not ours to rename.
+
+### No typecheck
+
+This is the one plugin here without a `typecheck` script, and it is a real gap.
+Its client half imports harness client packages for the module augmentations
+that declare the composer slots it fills. Upstream resolves those with `link:`
+devDependencies into a sibling harness monorepo; installing them from npm
+instead deadlocks, because the published rc.7 packages peer `^0.1.0-rc.7`, npm
+resolves that to rc.8, and rc.8 peers `^0.1.0-rc.8`. Pinning rc.8 would install
+but would check against a version that is not the one running. The build is the
+guard instead: esbuild fails on unresolved non-external imports, and the build
+script asserts both halves contain what the loader needs.
+
 ## Language
 
 This repository writes English only, and English is the default. It does not
@@ -257,7 +303,7 @@ bytes* stays, because changing it would silently break the match.
 
 ## Licensing
 
-Four plugins here are derived from other people's work. Each keeps its upstream
+Five plugins here are derived from other people's work. Each keeps its upstream
 LICENSE, and a NOTICE recording exactly what was changed:
 
 | Plugin | Upstream | License |
@@ -265,6 +311,7 @@ LICENSE, and a NOTICE recording exactly what was changed:
 | `context` | [bowenliang123/dsh-context](https://github.com/bowenliang123/dsh-context) | Apache-2.0 |
 | `archived-sessions` | [Zephyr-vibe/dsh-archived-sessions](https://github.com/Zephyr-vibe/dsh-archived-sessions) | MIT |
 | `vision-toolkit` | [Anionex/dsh-vision-toolkit](https://github.com/Anionex/dsh-vision-toolkit) | MIT |
+| `at-file` | [omdsh-dev/dsh-at-file](https://github.com/omdsh-dev/dsh-at-file) | MIT |
 | `browser` | [Clizo1209/dsh-playwright-browser](https://github.com/Clizo1209/dsh-playwright-browser) | MIT |
 
 Everything else in this directory is MIT and original to this repository.

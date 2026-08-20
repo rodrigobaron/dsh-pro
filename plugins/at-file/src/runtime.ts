@@ -1,0 +1,72 @@
+/**
+ * The at-file host Remote service (`ctx.atFile`, wire namespace `atFile`).
+ * Registered as a TypertRemoteService so the Host Gateway's source-mode
+ * discovery exports its @Remote methods to the Web client under
+ * `/api/atFile/<method>` with zero generated artifacts: `search` takes the
+ * resolved live Agent (the `agent` Typert lookup) and indexes its workspace.
+ * File content never crosses this wire or the Host mention boundary; the
+ * plugin only indexes and marks user-selected paths.
+ */
+import type { Context } from '@deepseek-ai/cordis'
+import { Remote, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol'
+import type { Agent } from '@deepseek-ai/dsh-agent'
+import { indexWorkspace } from './files.ts'
+import type { AtFileSettings, AtFileSettingsUpdate, FileEntry } from './contract.ts'
+import type { ResolvedConfig } from './types.ts'
+import { effectiveIgnoreFiles } from './defaults.ts'
+
+/** At-file workspace service: search the cwd index for the browser picker. */
+export class AtFileRuntime extends TypertRemoteService {
+  /**
+   * Register the service under the `atFile` key (the wire namespace).
+   * @param ctx - owning cordis context.
+   * @param config - resolved plugin configuration.
+   * @param isEnabled - live settings read; false refuses the endpoint.
+   */
+  constructor(
+    ctx: Context,
+    private readonly config: ResolvedConfig,
+    private readonly readSettings: () => AtFileSettings,
+    private readonly writeSettings: (update: AtFileSettingsUpdate) => Promise<AtFileSettings>,
+  ) {
+    super(ctx, 'atFile')
+  }
+
+  /** Read the resolved durable settings through the plugin-owned wire. */
+  @Remote
+  getSettings(): AtFileSettings {
+    return this.readSettings()
+  }
+
+  /** Persist one settings field and return the resolved section. */
+  @Remote
+  updateSettings(update: AtFileSettingsUpdate): Promise<AtFileSettings> {
+    return this.writeSettings(update)
+  }
+
+  /**
+   * Index the addressed agent's workspace and return the bounded entry list.
+   * The client caches the list per session and filters per keystroke.
+   * @param agent - the live agent resolved from the `agentId` wire field; its
+   *   session header owns the workspace cwd.
+   * @param signal - caller lifetime; the walk races it.
+   * @returns workspace-root-relative entries with their absolute paths.
+   */
+  @Remote
+  async search(agent: Agent, signal: AbortSignal): Promise<readonly FileEntry[]> {
+    const settings = this.readSettings()
+    if (!settings.enabled) {
+      throw new Error('at-file is disabled in Settings')
+    }
+    const cwd = agent.session.header.cwd
+    if (cwd === undefined) {
+      throw new Error('at-file: the session has no workspace directory')
+    }
+    const index = await indexWorkspace(cwd, {
+      maxFiles: this.config.maxIndexedFiles,
+      ignoreDirs: this.config.ignoreDirs,
+      ignoreFiles: effectiveIgnoreFiles(settings, cwd),
+    }, signal)
+    return index.files
+  }
+}

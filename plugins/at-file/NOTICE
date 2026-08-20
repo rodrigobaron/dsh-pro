@@ -1,0 +1,54 @@
+This package is a standalone port of dsh-at-file by omdsh-dev, used under the
+MIT License. The original project lives at:
+
+    https://github.com/omdsh-dev/dsh-at-file
+
+Upstream ships TypeScript sources, so this is a port rather than a repackage.
+The behaviour is unchanged — the @ picker, the workspace index walk, the
+filter settings, and the pre-step <workspace-reference> marker all work as
+upstream designed them. The differences are packaging and this repository's
+conventions:
+
+  - Renamed to @my-dsh/at-file, and the Typert identities follow. Upstream
+    keys its manifest, invocation ids, and type symbols under the package name
+    `dsh-at-file`; the registry rejects duplicate package-face keys and
+    duplicate invocation ids, so a fork that kept them could not be installed
+    beside the original. Host and client both build from src/contract.ts, so
+    the two halves cannot drift apart. The one identity left alone is
+    `@deepseek-ai/dsh-session/types#SessionId`: it must equal the agent lookup
+    provider's wire identity, and it is not ours to rename.
+
+  - The client bundle's __ModuleLoader__ id is the installed package name,
+    because the web boot manifest looks a bundle up by that name.
+
+  - English only. Upstream carries a Simplified Chinese dictionary as the
+    key-set source of truth with English mirroring it. This repository writes
+    English only, so the English dictionary is now the source of truth and is
+    registered under both locale ids — selecting Chinese leaves the harness in
+    Chinese and these panels in English, rather than rendering raw message
+    keys from an unregistered namespace.
+
+  - schemastery and zod are bundled rather than installed. The harness profile
+    resolves only what it ships itself.
+
+  - The ./invariant companion is dropped. It registers a no-op installer to
+    reserve package ownership in the diagnostics registry, and its own
+    docstring records that the package has no runtime invariant to assert.
+
+  - dsh.plugin.json and README.zh.md are dropped: the first is read by
+    `dsh plugin add`, which this repository does not use, and the second is a
+    translation this repository does not carry.
+
+  - There is no typecheck script, and this is the one real loss. The client
+    half imports harness client packages for the module augmentations that
+    declare the composer slot names it fills; upstream resolves them with
+    `link:` devDependencies into a sibling deepseek-harness monorepo checkout,
+    which this repository does not have. Installing them from npm instead
+    fails: the published rc.7 packages peer `^0.1.0-rc.7`, npm resolves that
+    to rc.8, and rc.8 peers `^0.1.0-rc.8`. Pinning rc.8 would resolve but
+    would type-check against a version that is not the one running, which is
+    worse than no check. The build is the guard instead — esbuild fails on
+    unresolved non-external imports, and scripts/build.mjs asserts that both
+    halves contain what the loader needs.
+
+The MIT License text, including its copyright notice, is in LICENSE.

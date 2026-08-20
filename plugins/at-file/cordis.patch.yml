@@ -1,0 +1,7 @@
+# @path references in the composer. The host half owns the workspace index,
+# the durable filter settings, and the pre-step marker that hands the agent a
+# validated path; the browser half is loaded from the package's `./client`
+# export because the package declares `dsh.client`.
+- insert:
+    - id: at-file
+      name: '@my-dsh/at-file'
