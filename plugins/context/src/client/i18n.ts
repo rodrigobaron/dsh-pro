@@ -1,90 +1,10 @@
 /**
- * Bilingual dictionaries (zh/en) for every UI string. Missing keys fall back
- * to zh, then the key itself (handled by the harness locale service).
+ * UI strings. English only: this deployment pins the interface locale, so a
+ * second dictionary would be unreachable. A missing key falls back to the key
+ * itself, handled by the harness locale service.
  */
 
 export type Translate = (key: string, params?: Record<string, string | number>) => string
-
-export const DICT_ZH: Record<string, string> = {
-  'tab': '上下文',
-  'cat.system': '系统提示词', 'cat.tools': '工具定义', 'cat.user': '用户消息',
-  'cat.inject': '注入内容', 'cat.assistant': '助手消息', 'cat.tool': '工具结果',
-  'overview.title': '当前构成',
-  'overview.estimate': 'tokens（估算）',
-  'overview.free': '剩余窗口',
-  'overview.used': '上下文已用',
-  'overview.ofUsed': '占已用上下文',
-  'overview.compactReserve': '自动压缩预留：占用达 {pct}% 窗口时触发压缩，此区域一般不实际占用',
-  'stats.title': '上下文统计',
-  'stats.hint': '统计当前保留的历史窗口（与趋势图一致）',
-  'stats.turns': '轮次', 'stats.steps': '步数',
-  'stats.injects': '注入',
-  'stats.compactions': '压缩',
-  'stats.prunes': '剪枝',
-  'stats.cacheHit': '缓存命中',
-  'tools.top': '工具定义 Top：',
-  'tools.more': '等 {n} 个',
-  'trend.title': '历史趋势',
-  'gran.step': '步骤', 'gran.turn': '轮次',
-  'trend.hint': '悬停查看详情，✂ 表示压缩/剪枝，Step/Turn 切换粒度',
-  'trend.empty': '发起一轮对话后，这里会展示每次模型请求的上下文构成',
-  'detail.step': '第 {t} 轮 · 第 {s} 步',
-  'detail.turn': '第 {t} 轮 · 共 {n} 步',
-  'detail.lastStep': '末步',
-  'detail.estTotal': '估算合计 ≈ {n}',
-  'detail.actual': '实际 prompt {n}',
-  'detail.output': '输出 {n}',
-  'events.title': '上下文事件',
-  'events.empty': '暂无上下文事件（压缩、注入、模型切换会出现在这里）',
-  'events.at': '第 {t} 轮 · 第 {s} 步',
-  'events.range': '第 {t} 轮 · 第 {a}→{b} 步',
-  'events.rangeTo': '第 {a} 轮 · 第 {as} 步 → 第 {b} 轮 · 第 {bs} 步',
-  'kind.inject': '注入', 'kind.compaction': '压缩', 'kind.prune': '剪枝', 'kind.model': '切换',
-  'nodes.title': '消息构成',
-  'nodes.hint': '当前模型可见的消息，最新在前',
-  'nodes.more': '… 更早的 {n} 条消息已省略',
-  'nodes.empty': '当前没有模型可见的消息',
-  'loading': '正在读取会话日志…',
-  'error': '上下文数据读取失败：',
-  'footer': '估算口径：与 dsh 内置 tokenMeter 相同的固定密度启发式（约 4 字符 ≈ 1 token）；「实际」为供应商上报用量。',
-  'tip.step': '第 {t} 轮 · 第{s}步',
-  'tip.turn': '第 {t} 轮 · 共 {n} 步',
-  'tip.total': '合计 ≈ {n}',
-  'tip.actual': '（实际 {n}）',
-  'ev.compaction': '压缩上下文（摘要替换 {n} 条消息）',
-  'ev.prune': '剪枝工具输出',
-  'ev.skill': 'Skill 注入（{name}）',
-  'ev.model': '模型切换：{a} → {b}',
-  'form.instructions': '指令注入', 'form.catalog': '目录更新', 'form.snapshot': '状态快照',
-  'form.notice': '通知', 'form.relay': '代理转发', 'form.recall': '历史召回', 'form.context': '上下文注入',
-  'node.toolResult': '工具结果',
-  'node.calls': '调用 ',
-  'node.empty': '(空回复)',
-  'node.nonText': '(非文本消息)',
-  'node.snapshot': '快照: ',
-  'cmd.desc': '查看当前上下文构成，浏览各步骤组成',
-  'cmd.close': '关闭',
-  'browser.title': '上下文浏览器',
-  'browser.live': '当前（下一次请求）',
-  'browser.liveNow': '当前 · 下一次请求',
-  'browser.items': '{n} 项',
-  'browser.missingLive': '… 另有 {n} 条更早的消息也在上下文中（超出展示窗口）',
-  'browser.approx': '该步骤涉及的部分已移除消息超出保留范围，以下为近似构成',
-  'browser.deltaHint': '对比上轮末步的变动',
-  'browser.noHeader': '此数据来自旧版插件：仅提供 token 估算，无实际内容',
-  'browser.noEpoch': '该步骤的头部内容（系统提示词 / 工具定义）不在保留范围内',
-  'browser.noContent': '完整内容不在当前加载的消息窗口内（在聊天页加载更早历史后可查看）',
-  'browser.loading': '正在从更早的会话历史加载完整内容…',
-  'browser.preview': '预览',
-  // Tool schema browser card: parsed parameter table sits above the (collapsed
-  // by default) raw JSON so the common case — skimming arguments — stays
-  // scannable; the JSON is still one click away for the full payload.
-  'tool.desc': '描述',
-  'tool.params': '参数',
-  'tool.paramsEmpty': '（无参数）',
-  'tool.jsonToggle': '查看原始 JSON',
-  'tool.jsonHide': '收起',
-}
 
 export const DICT_EN: Record<string, string> = {
   'tab': 'Context',

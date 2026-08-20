@@ -65,7 +65,7 @@ export const STYLES = [
   '.lc-stacked-dim .lc-stacked-free-on { opacity: 1; }',
   // Current-composition legend: an auto-flowing grid (as many columns as the
   // card fits, narrowing flows to fewer) whose cells are label-left /
-  // numbers-right rows — each category a tidy "● 系统提示词  ≈2.0k  2%".
+  // numbers-right rows — each category a tidy "● System Prompt  ≈2.0k  2%".
   '.lc-legend { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 6px 14px; margin-top: 10px; }',
   '.lc-chip { display: flex; align-items: center; gap: 5px; min-width: 0; color: var(--dsw-alias-label-primary); padding: 1px 6px; border-radius: 6px; cursor: pointer; transition: background-color 120ms ease; }',
   // The category name is the row's emphasis: bold at rest (the chip is a
@@ -85,8 +85,8 @@ export const STYLES = [
   '.lc-chip-on { font-weight: 600; background: var(--dsw-alias-interactive-bg-hover); }',
   '.lc-chip-on i { box-shadow: 0 0 0 1px var(--dsw-alias-brand-primary); }',
   '.lc-tools { margin-top: 10px; color: var(--dsw-alias-label-secondary); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }',
-  // The overview tool list links into the Context browser: the "工具定义 Top"
-  // label, its "等 N 个" overflow link, and every tool chip are buttons, and
+  // The overview tool list links into the Context browser: the "Top Tool Schemas"
+  // label, its "and N more" overflow link, and every tool chip are buttons, and
   // hover underlines them (the chip already reads as a tag, so the underline
   // is the only affordance).
   '.lc-tools-label, .lc-tools-more { border: 0; background: transparent; padding: 0; color: var(--dsw-alias-label-secondary); font-family: inherit; font-size: 12px; cursor: pointer; }',

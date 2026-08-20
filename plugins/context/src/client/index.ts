@@ -1,7 +1,7 @@
 /**
  * dsh-context — Client half (installed package bundle entry).
  *
- * Registers a "上下文/Context" tab in the conversation view ring
+ * Registers a "Context" tab in the conversation view ring
  * (`conversation.view` slot, beside Chat/Trajectory) and renders the
  * context-composition timeline: current makeup, per-request stacked-bar
  * history, context events, and the live message list.
@@ -21,7 +21,7 @@
  * beyond the bundled source.
  */
 
-import { DICT_EN, DICT_ZH } from './i18n'
+import { DICT_EN } from './i18n'
 import { registerContextCommand } from './command'
 import { makeContextModal } from './components/contextModal'
 import { modalStoreOf } from './modalStore'
@@ -35,12 +35,11 @@ import { React, h } from './react'
 const NS = 'dsh-context'
 
 function apply(ctx: ClientCtx): void {
-  // Bilingual dictionaries; the tab label thunk and all UI text follow the
-  // active locale through the bound translate (missing keys fall back to
-  // zh, then the key itself). The registration rides ctx.effect, so a stop
-  // or HMR reload disposes it.
+  // English dictionary; the tab label thunk and all UI text resolve through
+  // the bound translate. The registration rides ctx.effect, so a stop or HMR
+  // reload disposes it.
   ctx.effect(() => {
-    return ctx.locale.register(NS, { zh: DICT_ZH, en: DICT_EN })
+    return ctx.locale.register(NS, { en: DICT_EN })
   }, 'dsh-context: dictionaries')
   const t = ctx.locale.bind(NS)
 

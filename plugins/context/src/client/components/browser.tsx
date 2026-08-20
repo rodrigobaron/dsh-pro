@@ -1,5 +1,5 @@
 /**
- * ContextBrowser — the "Context 浏览器" card: pick the live surface or any
+ * ContextBrowser — the "Context Browser" card: pick the live surface or any
  * retained step and browse what the request was actually assembled from.
  *
  * Layout follows progressive disclosure instead of a flat dump:
@@ -56,7 +56,7 @@ export interface ContextBrowserProps {
   hoverKey?: string | null
   onHoverKey?: (key: string | null) => void
   /**
-   * Overview tool-chip bridge: a click on the overview card's "工具定义 Top"
+   * Overview tool-chip bridge: a click on the overview card's "Top Tool Schemas"
    * label (`tool` omitted) or one of its chips (`tool: name`) asks this
    * browser to reveal that section. A one-shot request — it is applied once
    * (switch to the live surface, open the "tools" category, and when a
@@ -540,7 +540,7 @@ export function makeContextBrowser(
       if (c === 'tools') {
         if (view.header === null) return <div className="lc-br-note">{t(headers === null ? 'browser.noHeader' : 'browser.noEpoch')}</div>
         // Schemas rank by token price (largest first), mirroring the overview's
-        // "工具定义 Top" chips; the producer's header order is not meaningful.
+        // "Top Tool Schemas" chips; the producer's header order is not meaningful.
         // Localized labels for the per-tool parameter table / JSON toggle:
         // passed in by the parent so the body component stays a pure function
         // of its props (testable in isolation, no closure over `t`).

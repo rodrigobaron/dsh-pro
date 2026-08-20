@@ -71,7 +71,7 @@ export function makeContextView(ctx: ClientCtx, kit: ViewKit): (props: ContextVi
       : null
     // Durable provider-reported usage comes from the OFFICIAL token-meter
     // `tokenUsage` projection — the exact same data the chat stats line below
-    // the input box reads for its "缓存命中" figure, so the stats board's
+    // the input box reads for its "Cache Hits" figure, so the stats board's
     // cache-hit cell reuses it verbatim. Absent key/value drops the cell to a
     // dash instead of estimating.
     const usage = typeof props.useProjection === 'function'
@@ -97,7 +97,7 @@ export function makeContextView(ctx: ClientCtx, kit: ViewKit): (props: ContextVi
     const [pickedKinds, setPickedKinds] = React.useState<string[]>([...EVENT_KINDS])
     const toggleKind = (k: string) => {
       setPickedKinds(p => {
-        // All picked -> narrow to this kind only (that's the "点击后只显示该分类" entry).
+        // All picked -> narrow to this kind only (that's the "click to show only this category" entry).
         if (p.length === EVENT_KINDS.length) return [k]
         // Unpicked -> add it (A -> A+B -> ...).
         if (!p.includes(k)) return [...p, k]
@@ -106,7 +106,7 @@ export function makeContextView(ctx: ClientCtx, kit: ViewKit): (props: ContextVi
       })
     }
     // Tool-link bridge to the Context browser: clicking the overview's
-    // "工具定义 Top" label (category focus) or one of its chips (specific
+    // "Top Tool Schemas" label (category focus) or one of its chips (specific
     // tool focus) asks the browser to reveal the corresponding section.
     // One-shot — the browser applies it and clears it back through
     // `onToolFocusHandled`, so clicking the same chip again re-triggers.
@@ -291,7 +291,7 @@ export function makeContextView(ctx: ClientCtx, kit: ViewKit): (props: ContextVi
               // live step, gated inside the browser itself.
               hoverKey={hoverCat}
               onHoverKey={setHoverCat}
-              // Tool-link bridge from the overview ("工具定义 Top" chips).
+              // Tool-link bridge from the overview ("Top Tool Schemas" chips).
               toolFocus={toolFocus}
               onToolFocusHandled={clearToolFocus}
             />

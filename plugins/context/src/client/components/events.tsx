@@ -6,7 +6,7 @@
  * harness's shared icon set (`@deepseek-ai/dsh-client-ui-primitives`, a
  * platform seed word resolved from the loader module table); compaction and
  * prune keep the ✂ marker (product vocabulary, no shared glyph exists).
- * Each row carries a kind chip (注入/压缩/剪枝/切换) so the classification is
+ * Each row carries a kind chip (inject / compact / prune / switch) so the classification is
  * readable at a glance; chip color matches the impact direction (+ adds,
  * − frees, ⇄ neutral), mirroring the token sign colors. Long labels truncate
  * with an ellipsis; the native title tooltip is attached only while the

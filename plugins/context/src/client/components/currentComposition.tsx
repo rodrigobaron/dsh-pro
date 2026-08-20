@@ -1,8 +1,8 @@
 /**
- * CurrentComposition — the "当前构成" card shared by the Context tab and the
+ * CurrentComposition — the "Current Context" card shared by the Context tab and the
  * /context popup: the composition headline (occupancy vs window), the
  * composition bar (with the auto-compaction reserve band), the legend, and —
- * when a tool bridge is wired — the ranked "工具定义 Top" chips that jump the
+ * when a tool bridge is wired — the ranked "Top Tool Schemas" chips that jump the
  * Context browser to a tool section.
  *
  * JSX function component, pure (no state): everything flows through props so
@@ -31,7 +31,7 @@ export interface CurrentCompositionProps {
   /** Shared hover link (bar + legend + browser while it shows the live step). */
   hoverKey?: string | null
   onHoverKey?: (key: string | null) => void
-  /** Optional ranked tool schemas for the "工具定义 Top" row (absent = no chips). */
+  /** Optional ranked tool schemas for the "Top Tool Schemas" row (absent = no chips). */
   tools?: { name: string; tokens: number }[]
   /** One-shot tool-focus request into the Context browser (omitted = no chips). */
   onToolFocus?: (focus: { tool?: string } | null) => void
