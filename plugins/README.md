@@ -342,10 +342,48 @@ SearXNG and AnySearch alike — far more than any per-engine market setting.
 
 The default **engine** changes for the same reason. Upstream picks Bing and
 says why: "most stable, optimized for Chinese (`zh-CN`)". That reason does not
-survive the switch. Measured on "what is the capital of Portugal", DuckDuckGo
-returned `en.wikipedia.org/wiki/Lisbon` first; Bing returned Capital One and a
-UK radio station behind `bing.com/ck/a` redirect wrappers. DuckDuckGo
-rate-limits more often, which the fallback chain already handles by moving on.
+survive the switch — and Bing turns out to be the engine that gets answers
+*wrong*, silently (see below).
+
+Measured across three queries per engine, tracking availability and
+correctness separately, because a returned result is not a right one:
+
+| Engine | Available | Median | Honours `site:` | Answers a question |
+| --- | --- | --- | --- | --- |
+| `keenable` | 3/3 | 518ms | yes | yes |
+| `anysearch` | 3/3 | 1317ms | yes | yes |
+| `exa` | 3/3 | 1331ms | yes | yes |
+| `tavily` | 3/3 | 1727ms | yes | yes |
+| `bing` | 3/3 | 268ms | **no** | yes |
+| `ddg` | 2/3 | 943ms | 403 | 403 |
+| `ddg-lite` | 1/3 | 3234ms | rate-limited | rate-limited |
+
+The default is `keenable`: fastest of the engines that are actually correct,
+and keyless (`KEENABLE_API_KEY` only raises the quota). `ddg` held the spot
+briefly on the strength of one good query, then spent the rest of the session
+rate-limited. The fallback chain covers a bad day for any of them.
+
+### The fallback chain
+
+Without a time filter the chain is `[preferred, ...paid, ...free]`:
+
+```
+preferred -> exa -> tavily -> keenable -> perplexity -> deepseek-official
+          -> bing -> anysearch -> ddg -> ddg-lite -> searxng
+```
+
+It stops at the first engine returning **more than zero** results — zero counts
+as failure — under a 30s budget shared by the whole chain.
+
+"Paid first" is not as odd as it reads. `exa`, `tavily`, and `keenable` all
+work keyless (MCP or anonymous tier) and are always tried; a key raises their
+quota rather than unlocking them. `perplexity` and `deepseek-official` are the
+only two that need one, and without it they are skipped before any request, so
+they cost nothing to leave in the chain.
+
+One trap: with a `timeRange`, a preferred engine that cannot time-filter is
+dropped from the chain **entirely**, not demoted. Prefer `bing` and ask for
+last-week results and bing never runs.
 
 Nothing else emits Chinese: every other Chinese string in the host half is a
 comment, and the model-facing text — tool descriptions and the injected

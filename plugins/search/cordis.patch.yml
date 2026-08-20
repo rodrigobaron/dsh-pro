@@ -10,7 +10,7 @@
     - id: web-search-free
       name: '@my-dsh/search'
       config:
-        provider: ddg
+        provider: keenable
 
 # Point the web seam at this plugin. THIS IS THE ROW THAT MAKES IT WORK.
 #

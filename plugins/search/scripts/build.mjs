@@ -62,12 +62,28 @@ host = rewrite(host, 'lang: z.string().default("zh"),', 'lang: z.string().defaul
 
 // The default engine. Upstream picks Bing and says why: "most stable,
 // optimized for Chinese (zh-CN)". That reason does not survive the switch to
-// English. Measured on this machine, "what is the capital of Portugal":
-// DuckDuckGo returned en.wikipedia.org/wiki/Lisbon first; Bing returned
-// Capital One and a UK radio station, behind bing.com/ck/a redirect wrappers.
-// DuckDuckGo rate-limits more often, which the automatic fallback chain
-// already handles by moving on to Bing and the rest.
-host = rewrite(host, 'provider: z.string().default("bing"),', 'provider: z.string().default("ddg"),', 'default engine')
+// English, and Bing turns out to be the engine that gets answers WRONG:
+// cookieless requests silently ignore site:/filetype:/inurl: and return a
+// confident result set for a different query.
+//
+// Measured here across three queries per engine, availability and correctness
+// separately, because a returned result is not a right one:
+//
+//   engine      available  median   site:  question
+//   keenable        3/3     518ms    yes     yes
+//   anysearch       3/3    1317ms    yes     yes
+//   exa             3/3    1331ms    yes     yes
+//   tavily          3/3    1727ms    yes     yes
+//   bing            3/3     268ms    NO      yes
+//   ddg             2/3     943ms    403     403
+//   ddg-lite        1/3    3234ms    rate-limited
+//
+// keenable it is: fastest of the engines that are actually correct, and it
+// needs no key (keyless MCP; KEENABLE_API_KEY only raises the quota). ddg was
+// the earlier pick here on the strength of one good query, and then spent the
+// rest of the session rate-limited. The fallback chain covers a bad day for
+// any of them.
+host = rewrite(host, 'provider: z.string().default("bing"),', 'provider: z.string().default("keenable"),', 'default engine')
 
 // Bing's market, in the schema and again as a hardcoded fallback for a cleared
 // setting. Both have to move or a blank field silently returns Chinese results.

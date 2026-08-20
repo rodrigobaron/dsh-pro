@@ -22,11 +22,18 @@ English defaults. Upstream is tuned for Chinese, and four values carry that:
 
 The default engine changes with them, for the same reason. Upstream picks Bing
 and says why: "most stable, optimized for Chinese (zh-CN)". That reason does
-not survive the switch to English. Measured here on "what is the capital of
-Portugal", DuckDuckGo returned en.wikipedia.org/wiki/Lisbon first while Bing
-returned Capital One and a UK radio station, behind bing.com/ck/a redirect
-wrappers. DuckDuckGo rate-limits more often, which the automatic fallback
-chain already handles by moving on to Bing and the rest.
+not survive the switch to English, and Bing turns out to be the engine that
+gets answers wrong: cookieless requests silently ignore site:/filetype:/inurl:.
+
+Measured across three queries per engine, availability and correctness tracked
+separately because a returned result is not a right one: keenable 3/3 at 518ms
+median, anysearch 3/3 at 1317ms, exa 3/3 at 1331ms, tavily 3/3 at 1727ms — all
+four correct on both a site: query and a factual question. Bing was 3/3 and
+fastest at 268ms but wrong on site:. ddg managed 2/3 and ddg-lite 1/3, both
+rate-limited from this address.
+
+The default is keenable: the fastest of the engines that are actually correct,
+and keyless (KEENABLE_API_KEY only raises the quota).
 
 Nothing else in the plugin emits Chinese. Every other Chinese string in the
 host half is a comment, and the model-facing text — tool descriptions and the
