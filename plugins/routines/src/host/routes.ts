@@ -10,6 +10,7 @@
  * - DELETE /api/routines/jobs?id=…     → remove
  * - POST   /api/routines/jobs/run?id=… → fire now (background)
  * - GET    /api/routines/workspaces    → host workspace registry {id,path}
+ * - GET    /api/routines/presets       → selectable agent presets {id,name}
  * - GET    /api/routines/model-options → default model + provider/model catalog
  *
  * @module @my-dsh/routines/routes
@@ -141,6 +142,7 @@ export function makeRoutes(deps: RouteDeps): HostRoute[] {
           writeJson(res, 400, { error: 'title is required' })
           return
         }
+        const presetId = typeof body.presetId === 'string' ? body.presetId.trim() : ''
         const cron = typeof body.cron === 'string' ? body.cron.trim() : ''
         const armCron = cron !== ''
         if (armCron && !isValidCron(cron)) {
@@ -162,6 +164,7 @@ export function makeRoutes(deps: RouteDeps): HostRoute[] {
             sessionId: typeof target.sessionId === 'string' ? target.sessionId.trim() : '',
           },
           ...modelSelection === undefined ? {} : { modelSelection },
+          ...presetId === '' ? {} : { presetId },
         }, deps.now(), randomUUID())
         if (armCron) {
           job = withSchedule(job, { enabled: true, cron, nextRunAt: nextRunAtMs(cron, deps.now()) }, deps.now())
@@ -188,6 +191,7 @@ export function makeRoutes(deps: RouteDeps): HostRoute[] {
           if (typeof body.title === 'string' && body.title.trim() !== '') next = { ...next, title: body.title.trim() }
           if (typeof body.description === 'string') next = { ...next, description: body.description }
           if (typeof body.prompt === 'string') next = { ...next, prompt: body.prompt }
+          if (typeof body.presetId === 'string') next = { ...next, presetId: body.presetId.trim() }
           if ('modelSelection' in body) {
             const modelSelection = readModelSelection(body.modelSelection)
             if (modelSelection === 'invalid') return undefined
@@ -309,6 +313,36 @@ export function makeRoutes(deps: RouteDeps): HostRoute[] {
     },
   }
 
+  const presetsRoute: HostRoute = {
+    kind: 'exact',
+    path: `${API_PREFIX}/presets`,
+    handler: async (req, res) => {
+      if (!isLoopbackRequest(req)) {
+        writeJson(res, 403, { error: 'forbidden: loopback-only' })
+        return
+      }
+      if (req.method !== 'GET') {
+        writeJson(res, 405, { error: `method not allowed: ${req.method}` })
+        return
+      }
+      // A roster the harness cannot read is not worth failing the panel for:
+      // the preset select falls back to "deployment default" on an empty list.
+      try {
+        const presets = deps.ctx.get('agentPresets')
+        const roster = presets === undefined ? [] : await presets.list()
+        writeJson(res, 200, {
+          presets: roster
+            // A broken composition would fail every run pinned to it, so it is
+            // not offered.
+            .filter(preset => preset.broken === undefined)
+            .map(preset => ({ id: preset.id, name: preset.name ?? preset.id })),
+        })
+      } catch {
+        writeJson(res, 200, { presets: [] })
+      }
+    },
+  }
+
   const modelOptionsRoute: HostRoute = {
     kind: 'exact',
     path: `${API_PREFIX}/model-options`,
@@ -352,5 +386,5 @@ export function makeRoutes(deps: RouteDeps): HostRoute[] {
     },
   }
 
-  return [jobsRoute, runRoute, workspacesRoute, modelOptionsRoute]
+  return [jobsRoute, runRoute, workspacesRoute, presetsRoute, modelOptionsRoute]
 }

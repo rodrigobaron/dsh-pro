@@ -97,6 +97,17 @@ export interface HostAgentPresets {
   resolve(id?: string): Promise<{ readonly id: string }>
   /** Join one agent's scope to a preset's standing composition. */
   mount(agentCtx: object, id?: string): Promise<unknown>
+  /**
+   * The roster a routine may choose from. `broken` carries the reason a
+   * composition failed to load, and such a preset would fail every run pinned
+   * to it, so it is not offered.
+   */
+  list(): Promise<readonly {
+    readonly id: string
+    readonly name?: string
+    readonly description?: string
+    readonly broken?: string
+  }[]>
 }
 
 /**

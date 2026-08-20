@@ -290,7 +290,7 @@ export class RoutineRunner {
     // back with the resolver's error), matching the GUI's behavior.
     let presetMeta: { agentPreset: string } | undefined
     let presetSetup: ((agentCtx: object) => Promise<void>) | undefined
-    ;({ presetMeta, presetSetup } = await this.composeDefaultPreset())
+    ;({ presetMeta, presetSetup } = await this.composeDefaultPreset(job.presetId))
     const handle = await agents.create({
       sessionId,
       ...(agentOptions !== undefined ? { agentOptions } : {}),
@@ -304,7 +304,8 @@ export class RoutineRunner {
   }
 
   /**
-   * Compose a NEW session's default preset: resolve the roster default, record
+   * Compose a NEW session's preset: resolve the routine's preset (or the
+   * roster default when it names none), record
    * it on the session header, and join the agent's scope to its standing
    * mount inside the factory setup hook (api-proxy composeAgent precedent —
    * the join decides the agent's tools, prompt sections, and skills, so a
@@ -312,13 +313,16 @@ export class RoutineRunner {
    * Undefined parts when no roster is composed; a broken default preset
    * rejects so creation rolls back with the resolver's error.
    */
-  private async composeDefaultPreset(): Promise<{
+  private async composeDefaultPreset(presetId?: string): Promise<{
     presetMeta: { agentPreset: string } | undefined
     presetSetup: ((agentCtx: object) => Promise<void>) | undefined
   }> {
     const presets = this.ctx.get('agentPresets')
     if (presets === undefined) return { presetMeta: undefined, presetSetup: undefined }
-    const resolvedId = (await presets.resolve()).id
+    // resolve(id) validates the named preset and falls back to the roster
+    // default when it is absent, so a routine pinned to a preset that was
+    // later deleted still runs instead of failing every tick.
+    const resolvedId = (await presets.resolve(presetId)).id
     return {
       presetMeta: { agentPreset: resolvedId },
       presetSetup: async agentCtx => { await presets.mount(agentCtx, resolvedId) },

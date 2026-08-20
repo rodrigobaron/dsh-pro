@@ -9,10 +9,11 @@
 import type * as ReactNS from 'react'
 import { React, h } from './react.ts'
 import {
-  createRoutine, listRoutines, removeRoutine, RoutineError, runRoutine, updateRoutine,
-  type Routine,
+  createRoutine, listModelOptions, listPresets, listRoutines, listWorkspaces,
+  removeRoutine, RoutineError, runRoutine, updateRoutine,
+  type ModelOptions, type PresetOption, type Routine,
 } from './api.ts'
-import { PRESETS } from './locales.ts'
+import { BUILT_IN_PRESETS, PRESETS } from './locales.ts'
 
 type Translate = (key: string, params?: Record<string, string | number>) => string
 
@@ -48,7 +49,19 @@ export function makeSection(fallbackT: Translate): (props: SectionProps) => Reac
     const [error, setError] = React.useState<string | null>(null)
     const [busy, setBusy] = React.useState<string | null>(null)
     const [adding, setAdding] = React.useState(false)
-    const [draft, setDraft] = React.useState({ title: '', prompt: '', cron: '', workdir: '' })
+    const [draft, setDraft] = React.useState({ title: '', prompt: '', cron: '', workdir: '', presetId: '', model: '' })
+    const [workspaces, setWorkspaces] = React.useState<readonly { id: string; path: string }[]>([])
+    const [presets, setPresets] = React.useState<readonly PresetOption[]>([])
+    const [models, setModels] = React.useState<ModelOptions>({ groups: [] })
+
+    // Option feeds, loaded once. Each degrades to an empty list rather than
+    // failing the panel, so a missing workspace registry or preset roster
+    // leaves you with "default" instead of a broken form.
+    React.useEffect(() => {
+      void listWorkspaces().then(setWorkspaces)
+      void listPresets().then(setPresets)
+      void listModelOptions().then(setModels)
+    }, [])
 
     const refresh = React.useCallback(async () => {
       try {
@@ -77,13 +90,25 @@ export function makeSection(fallbackT: Translate): (props: SectionProps) => Reac
     const submit = async (): Promise<void> => {
       setBusy('new')
       try {
+        // `provider:model` splits on the FIRST colon only — model ids contain
+        // colons and slashes of their own (deepseek/deepseek-v4-flash-0731).
+        const separator = draft.model.indexOf(':')
+        const modelSelection = separator === -1 ? undefined : {
+          provider: draft.model.slice(0, separator),
+          model: draft.model.slice(separator + 1),
+        }
         await createRoutine({
           title: draft.title.trim(),
           prompt: draft.prompt.trim(),
           cron: draft.cron.trim(),
-          ...(draft.workdir.trim() === '' ? {} : { workdir: draft.workdir.trim() }),
+          // `target.workdir`, not a root `workdir`: the route reads it off
+          // target and ignores unknown root fields without complaining, so
+          // the flat form silently created routines with no project.
+          ...(draft.workdir === '' ? {} : { target: { workdir: draft.workdir } }),
+          ...(draft.presetId === '' ? {} : { presetId: draft.presetId }),
+          ...(modelSelection === undefined ? {} : { modelSelection }),
         })
-        setDraft({ title: '', prompt: '', cron: '', workdir: '' })
+        setDraft({ title: '', prompt: '', cron: '', workdir: '', presetId: '', model: '' })
         setAdding(false)
         await refresh()
       } catch (cause) {
@@ -108,6 +133,41 @@ export function makeSection(fallbackT: Translate): (props: SectionProps) => Reac
       opts.help === undefined ? null : h('span', { className: 'dsh_rt_help' }, t(opts.help)),
     )
 
+    const select = (
+      key: string, value: string, onChange: (next: string) => void,
+      options: readonly { value: string; label: string; title?: string }[],
+      help?: string,
+    ): ReactNS.ReactElement => h('label', { className: 'dsh_rt_field', key },
+      h('span', { className: 'dsh_rt_label' }, t(key)),
+      h('select', {
+        className: 'dsh_rt_input',
+        value,
+        onChange: (event: { target: { value: string } }) => onChange(event.target.value),
+      }, options.map(option => h('option', { key: option.value, value: option.value, title: option.title }, option.label))),
+      help === undefined ? null : h('span', { className: 'dsh_rt_help' }, t(help)),
+    )
+
+    // Other plugins register their own provider routes into the same catalog —
+    // vision-toolkit mirrors every provider as `vision-toolkit-<id>` with the
+    // same display name and models — so the raw list offers each model twice
+    // under an identical label. Two options nobody can tell apart should not
+    // both be there; first wins, which keeps the primary routes.
+    const modelChoices = React.useMemo(() => {
+      const seen = new Set<string>()
+      const out: { value: string; label: string }[] = []
+      for (const group of models.groups) {
+        for (const model of group.models) {
+          const label = `${group.name} · ${model.name}`
+          if (seen.has(label)) continue
+          seen.add(label)
+          // provider:model — the wire shape the host expects, kept whole in the
+          // option value so nothing has to re-parse a display label.
+          out.push({ value: `${group.id}:${model.id}`, label })
+        }
+      }
+      return out
+    }, [models])
+
     const form = h('div', { className: 'dsh_rt_form' },
       field('title', draft.title, v => setDraft(d => ({ ...d, title: v }))),
       field('prompt', draft.prompt, v => setDraft(d => ({ ...d, prompt: v })), { area: true }),
@@ -118,7 +178,15 @@ export function makeSection(fallbackT: Translate): (props: SectionProps) => Reac
         className: 'dsh_rt_preset',
         onClick: () => setDraft(d => ({ ...d, cron: preset.cron })),
       }, t(preset.key)))),
-      field('workdir', draft.workdir, v => setDraft(d => ({ ...d, workdir: v })), { help: 'workdir.help' }),
+      select('workdir', draft.workdir, v => setDraft(d => ({ ...d, workdir: v })),
+        [{ value: '', label: t('workdir.default') },
+          ...workspaces.map(w => ({ value: w.path, label: w.path.split('/').pop() ?? w.path, title: w.path }))],
+        'workdir.help'),
+      select('preset', draft.presetId, v => setDraft(d => ({ ...d, presetId: v })),
+        [{ value: '', label: t('preset.default') }, ...presets.map(p => ({ value: p.id, label: BUILT_IN_PRESETS[p.id] ?? p.name }))],
+        'preset.help'),
+      select('model', draft.model, v => setDraft(d => ({ ...d, model: v })),
+        [{ value: '', label: t('model.default') }, ...modelChoices]),
       h('div', { className: 'dsh_rt_formActions' },
         h('button', { type: 'button', className: 'dsh_rt_btn', onClick: () => setAdding(false), disabled: busy === 'new' }, t('cancel')),
         h('button', {

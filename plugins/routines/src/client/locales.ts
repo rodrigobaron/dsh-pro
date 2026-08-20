@@ -18,9 +18,14 @@ export const en = {
   'cron': 'Schedule',
   'cron.ph': '0 9 * * *',
   'cron.help': 'Five fields: minute hour day month weekday.',
-  'workdir': 'Project directory',
-  'workdir.ph': 'Leave blank to run in the default workspace',
-  'workdir.help': 'A directory starts each run in a fresh session there, loading its AGENTS.md.',
+  'workdir': 'Project',
+  'workdir.help': 'A project starts each run in a fresh session there, loading its AGENTS.md.',
+  'workdir.default': 'Default workspace',
+  'preset': 'Agent preset',
+  'preset.help': 'Which tools and prompt sections the run gets.',
+  'preset.default': 'Deployment default',
+  'model': 'Model',
+  'model.default': 'Deployment default',
   'save': 'Create routine',
   'saving': 'Creating…',
   'cancel': 'Cancel',
@@ -42,6 +47,23 @@ export const en = {
   'preset.weekdays': 'Weekdays at 09:00',
   'preset.weekly': 'Mondays at 09:00',
 } satisfies Record<string, string>
+
+/**
+ * English labels for the harness's built-in presets.
+ *
+ * The roster reports each preset's own `name`, and for the four built-ins that
+ * name is Simplified Chinese (标准模式, PTC 模式, …) regardless of the
+ * interface language. The harness's own preset picker does not show those
+ * either — it carries these labels. Matching them keeps this select saying
+ * what the rest of the GUI says; anything not listed is a custom preset whose
+ * name its author chose, and is shown as-is.
+ */
+export const BUILT_IN_PRESETS: Readonly<Record<string, string>> = {
+  standard: 'Standard mode',
+  code: 'PTC mode',
+  minimal: 'Minimal mode',
+  cordis: 'Creator mode',
+}
 
 /** Cron presets offered beside the field, so the common cases need no syntax. */
 export const PRESETS: readonly { key: string; cron: string }[] = [

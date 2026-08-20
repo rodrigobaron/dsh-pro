@@ -13,6 +13,8 @@ export interface Routine {
   readonly prompt: string
   readonly status: 'idle' | 'running' | string
   readonly target?: { readonly workdir?: string; readonly sessionId?: string }
+  readonly presetId?: string
+  readonly modelSelection?: { readonly provider: string; readonly model: string }
   readonly schedule?: { readonly enabled?: boolean; readonly cron?: string; readonly nextRunAt?: number }
   readonly executions?: readonly { readonly startedAt?: number; readonly ok?: boolean; readonly error?: string }[]
 }
@@ -22,7 +24,10 @@ export interface RoutineDraft {
   title: string
   prompt: string
   cron: string
-  workdir?: string
+  /** Nested, because the route reads the workdir off `target`, not the root. */
+  target?: { workdir?: string; sessionId?: string }
+  presetId?: string
+  modelSelection?: { provider: string; model: string }
 }
 
 const BASE = '/api/routines'
@@ -93,6 +98,44 @@ export async function removeRoutine(id: string): Promise<void> {
 /** Fire one routine now, in the background. */
 export async function runRoutine(id: string): Promise<void> {
   await call(`/jobs/run?id=${encodeURIComponent(id)}`, { method: 'POST' })
+}
+
+/** One agent preset a routine may run under. */
+export interface PresetOption { readonly id: string; readonly name: string }
+
+/** The model catalog, grouped by provider, plus the deployment default. */
+export interface ModelOptions {
+  readonly default?: { readonly provider: string; readonly model: string }
+  readonly groups: readonly {
+    readonly id: string
+    readonly name: string
+    readonly models: readonly { readonly id: string; readonly name: string }[]
+  }[]
+}
+
+/**
+ * The presets a routine may run under.
+ *
+ * An empty list is a valid answer, not a failure: it means the panel offers
+ * only "deployment default", which is what every routine did before presets
+ * were selectable.
+ */
+export async function listPresets(): Promise<readonly PresetOption[]> {
+  try {
+    return (await call<{ presets?: readonly PresetOption[] }>('/presets')).presets ?? []
+  } catch {
+    return []
+  }
+}
+
+/** The model catalog. Degrades to "deployment default" only, like presets. */
+export async function listModelOptions(): Promise<ModelOptions> {
+  try {
+    const body = await call<ModelOptions>('/model-options')
+    return { ...body, groups: body.groups ?? [] }
+  } catch {
+    return { groups: [] }
+  }
 }
 
 /** The workspaces a routine may target. */

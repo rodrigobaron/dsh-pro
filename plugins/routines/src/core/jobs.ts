@@ -104,6 +104,11 @@ export interface JobRecord {
   target: SessionTarget
   /** Model override for runs (absent → default resolution). */
   modelSelection?: JobModelSelection
+  /**
+   * Agent preset to mount for this routine's runs. Absent means the roster
+   * default, which is what every routine did before this was selectable.
+   */
+  presetId?: string
   /** Creation instant (ms epoch). */
   createdAt: number
   /** Last mutation instant (ms epoch). */
@@ -128,6 +133,7 @@ export interface NewJobInput {
   target: SessionTarget
   /** Model override for runs (absent → default resolution). */
   modelSelection?: JobModelSelection
+  presetId?: string
 }
 
 /** Statuses the runner may settle a card into from 'running'. */
@@ -151,6 +157,7 @@ export function createJob(input: NewJobInput, now: number, id: string): JobRecor
     status: 'idle',
     target: { ...input.target },
     ...input.modelSelection === undefined ? {} : { modelSelection: { ...input.modelSelection } },
+    ...input.presetId === undefined || input.presetId === '' ? {} : { presetId: input.presetId },
     createdAt: now,
     updatedAt: now,
     executions: [],

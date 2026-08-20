@@ -632,7 +632,8 @@ new conversation in the default workspace).
 
 Manage them in **Settings -> Routines**, with the model-facing `routines` tool,
 over `/api/routines/*`, or by editing `~/.dsh/routines/jobs.json`. One ledger,
-four doorways.
+four doorways. Each routine also picks its own agent preset and model, or
+inherits the deployment default.
 
 ### No sidebar
 
@@ -653,7 +654,48 @@ while it was down stays missed rather than backfilling, and every run costs API
 quota with nobody present — so a routine prompt must be self-contained and must
 never ask a question.
 
-### The silent-PATCH trap
+### Choosing project, preset, and model
+
+The new-routine form has three selects, all fed by the host:
+
+| Select | Source | Default |
+| --- | --- | --- |
+| Project | `GET /api/routines/workspaces` | the default workspace |
+| Agent preset | `GET /api/routines/presets` | the deployment default |
+| Model | `GET /api/routines/model-options` | the deployment default |
+
+The presets route is new — upstream had no per-routine preset, so every run
+mounted the roster default. A routine may now name one, and `resolve(id)` falls
+back to the default when a pinned preset was later deleted, so the routine
+still runs rather than failing every tick. Broken compositions are filtered out
+rather than offered.
+
+Two things the raw data needed before it was usable:
+
+- **Preset names arrive in Chinese.** The roster reports `标准模式`, `PTC 模式`
+  and so on regardless of interface language; the harness's own picker does not
+  show those either, it carries its own labels. This select matches them, so it
+  says what the rest of the GUI says. Anything not built-in keeps the name its
+  author chose.
+- **The model catalog contains duplicates.** Other plugins register their own
+  provider routes into it — vision-toolkit mirrors every provider as
+  `vision-toolkit-<id>` with the same display name and models — so each model
+  appeared twice under an identical label. Deduped by what the user actually
+  sees, first wins, which keeps the primary routes.
+
+### The silent-field traps
+
+`PATCH /api/routines/jobs` ignores fields it does not recognise and still
+answers `200`. That bit twice while building the form:
+
+- Pausing is `scheduleEnabled`, not `enabled`.
+- The project is `target.workdir`, not a root `workdir` — the flat form created
+  routines with no project at all, and reported success doing it.
+
+Both look like working requests that change nothing, so check a create or patch
+against the returned record rather than the status code.
+
+
 
 `PATCH /api/routines/jobs` ignores fields it does not recognise and still
 answers `200`. Pausing a routine is `scheduleEnabled`, not `enabled`; sending
