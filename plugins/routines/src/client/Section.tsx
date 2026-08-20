@@ -104,8 +104,9 @@ export function makeSection(fallbackT: Translate): (props: SectionProps) => Reac
           // `target.workdir`, not a root `workdir`: the route reads it off
           // target and ignores unknown root fields without complaining, so
           // the flat form silently created routines with no project.
-          ...(draft.workdir === '' ? {} : { target: { workdir: draft.workdir } }),
-          ...(draft.presetId === '' ? {} : { presetId: draft.presetId }),
+          // Required by the form, so sent unconditionally.
+          target: { workdir: draft.workdir },
+          presetId: draft.presetId,
           ...(modelSelection === undefined ? {} : { modelSelection }),
         })
         setDraft({ title: '', prompt: '', cron: '', workdir: '', presetId: '', model: '' })
@@ -133,6 +134,10 @@ export function makeSection(fallbackT: Translate): (props: SectionProps) => Reac
       opts.help === undefined ? null : h('span', { className: 'dsh_rt_help' }, t(opts.help)),
     )
 
+    // Every select opens on a disabled placeholder rather than a usable
+    // default. A routine targets a project, a preset, and a model explicitly —
+    // a pre-selected "default" is too easy to leave untouched and then wonder
+    // where the run happened.
     const select = (
       key: string, value: string, onChange: (next: string) => void,
       options: readonly { value: string; label: string; title?: string }[],
@@ -143,7 +148,10 @@ export function makeSection(fallbackT: Translate): (props: SectionProps) => Reac
         className: 'dsh_rt_input',
         value,
         onChange: (event: { target: { value: string } }) => onChange(event.target.value),
-      }, options.map(option => h('option', { key: option.value, value: option.value, title: option.title }, option.label))),
+      },
+        h('option', { key: '', value: '', disabled: true }, t('choose')),
+        ...options.map(option => h('option', { key: option.value, value: option.value, title: option.title }, option.label)),
+      ),
       help === undefined ? null : h('span', { className: 'dsh_rt_help' }, t(help)),
     )
 
@@ -168,6 +176,9 @@ export function makeSection(fallbackT: Translate): (props: SectionProps) => Reac
       return out
     }, [models])
 
+    const complete = draft.title.trim() !== '' && draft.prompt.trim() !== '' && draft.cron.trim() !== ''
+      && draft.workdir !== '' && draft.presetId !== '' && draft.model !== ''
+
     const form = h('div', { className: 'dsh_rt_form' },
       field('title', draft.title, v => setDraft(d => ({ ...d, title: v }))),
       field('prompt', draft.prompt, v => setDraft(d => ({ ...d, prompt: v })), { area: true }),
@@ -179,20 +190,21 @@ export function makeSection(fallbackT: Translate): (props: SectionProps) => Reac
         onClick: () => setDraft(d => ({ ...d, cron: preset.cron })),
       }, t(preset.key)))),
       select('workdir', draft.workdir, v => setDraft(d => ({ ...d, workdir: v })),
-        [{ value: '', label: t('workdir.default') },
-          ...workspaces.map(w => ({ value: w.path, label: w.path.split('/').pop() ?? w.path, title: w.path }))],
+        workspaces.map(w => ({ value: w.path, label: w.path.split('/').pop() ?? w.path, title: w.path })),
         'workdir.help'),
       select('preset', draft.presetId, v => setDraft(d => ({ ...d, presetId: v })),
-        [{ value: '', label: t('preset.default') }, ...presets.map(p => ({ value: p.id, label: BUILT_IN_PRESETS[p.id] ?? p.name }))],
+        presets.map(p => ({ value: p.id, label: BUILT_IN_PRESETS[p.id] ?? p.name })),
         'preset.help'),
       select('model', draft.model, v => setDraft(d => ({ ...d, model: v })),
-        [{ value: '', label: t('model.default') }, ...modelChoices]),
+        modelChoices),
+      complete || draft.title.trim() === '' ? null
+        : h('span', { className: 'dsh_rt_help' }, t('required')),
       h('div', { className: 'dsh_rt_formActions' },
         h('button', { type: 'button', className: 'dsh_rt_btn', onClick: () => setAdding(false), disabled: busy === 'new' }, t('cancel')),
         h('button', {
           type: 'button',
           className: 'dsh_rt_btn dsh_rt_primary',
-          disabled: busy === 'new' || draft.title.trim() === '' || draft.prompt.trim() === '' || draft.cron.trim() === '',
+          disabled: busy === 'new' || !complete,
           onClick: () => { void submit() },
         }, busy === 'new' ? t('saving') : t('save')),
       ),

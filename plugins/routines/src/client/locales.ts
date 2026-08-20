@@ -20,12 +20,11 @@ export const en = {
   'cron.help': 'Five fields: minute hour day month weekday.',
   'workdir': 'Project',
   'workdir.help': 'A project starts each run in a fresh session there, loading its AGENTS.md.',
-  'workdir.default': 'Default workspace',
+  'choose': 'Select…',
   'preset': 'Agent preset',
   'preset.help': 'Which tools and prompt sections the run gets.',
-  'preset.default': 'Deployment default',
+  'required': 'Pick a project, a preset, and a model before creating a routine.',
   'model': 'Model',
-  'model.default': 'Deployment default',
   'save': 'Create routine',
   'saving': 'Creating…',
   'cancel': 'Cancel',
@@ -42,6 +41,7 @@ export const en = {
   'lastFailed': 'Last run failed: {error}',
   'loading': 'Loading…',
   'error': 'Routines: {message}',
+  'preset.quarter': 'Every 15min',
   'preset.hourly': 'Every hour',
   'preset.daily': 'Every day at 09:00',
   'preset.weekdays': 'Weekdays at 09:00',
@@ -67,6 +67,7 @@ export const BUILT_IN_PRESETS: Readonly<Record<string, string>> = {
 
 /** Cron presets offered beside the field, so the common cases need no syntax. */
 export const PRESETS: readonly { key: string; cron: string }[] = [
+  { key: 'preset.quarter', cron: '*/15 * * * *' },
   { key: 'preset.hourly', cron: '0 * * * *' },
   { key: 'preset.daily', cron: '0 9 * * *' },
   { key: 'preset.weekdays', cron: '0 9 * * 1-5' },

@@ -658,11 +658,17 @@ never ask a question.
 
 The new-routine form has three selects, all fed by the host:
 
-| Select | Source | Default |
-| --- | --- | --- |
-| Project | `GET /api/routines/workspaces` | the default workspace |
-| Agent preset | `GET /api/routines/presets` | the deployment default |
-| Model | `GET /api/routines/model-options` | the deployment default |
+| Select | Source |
+| --- | --- |
+| Project | `GET /api/routines/workspaces` |
+| Agent preset | `GET /api/routines/presets` |
+| Model | `GET /api/routines/model-options` |
+
+All three are **required**, and each opens on a disabled `Select…` placeholder
+rather than a usable default. A routine runs unattended on a schedule, so where
+it runs, what it can do, and what it costs should each be a decision someone
+made — a pre-selected "default" is too easy to leave untouched and then wonder
+where the run happened. Create stays disabled until every field is set.
 
 The presets route is new — upstream had no per-routine preset, so every run
 mounted the roster default. A routine may now name one, and `resolve(id)` falls
