@@ -4,14 +4,14 @@
 // under every preset — standard, code, minimal, anything — instead of only the
 // one preset that happened to list it.
 //
-// A profile-level plugin has no agent `tools` service of its own, but it does
-// have `agents`: it watches `agent/created` and registers into that agent's own
-// `agent.ctx.tools`. That is how the vision toolkit mounts its tools too.
+// A profile-level plugin has no agent `tools` service of its own, but a tool
+// execution carries its agent: the `tools/result` for a `skill` call gives
+// `exec.agent`, whose `agent.ctx.tools` accepts the registration. That is how
+// the vision toolkit mounts its tools too.
 //
-// Exposure is progressive, mirroring the same plugin: the tool is registered
-// into every agent and then immediately restricted, so it costs nothing in the
-// tool schema until the model loads this plugin's skill. Calling
-// `skill("file-artifacts")` lifts the restriction for that agent alone.
+// Exposure is progressive: the tool is registered into an agent only once that
+// agent calls `skill("file-artifacts")`, so it costs nothing in the tool schema
+// until it is wanted, and nothing at all in agents that never need it.
 import { defineTool } from "@deepseek-ai/dsh-tools";
 import { buildEnvelope } from "./shared.js";
 
@@ -19,7 +19,7 @@ const name = "tool-file-canvas";
 
 // `workspaceRegistry` is read defensively in shared.js, so it is not required
 // here — a composition without it still resolves against the session cwd.
-const inject = ["skills", "agents", "fs"];
+const inject = ["skills", "fs"];
 
 /** Skill the model loads to reveal the tool. */
 const SKILL_NAME = "file-artifacts";
@@ -135,24 +135,33 @@ function apply(ctx) {
   });
 
   // ── progressive exposure ──────────────────────────────────────────────────
-  /** Per-agent bookkeeping: what to dispose, and how to reveal the tool. */
+  // The tool is registered into an agent ONLY once that agent loads the skill.
+  //
+  // The first attempt did the opposite — register into every agent, then hide
+  // it with `agent.ctx.tools.restrict({ deny: ['show_file'] })`. That throws:
+  // restrict() filters the GLOBAL tool surface, and an agent-scoped
+  // registration is not part of it ("names unknown global tool"). The throw
+  // happened inside the agent/created handler on every agent, which is what
+  // made the UI flash.
+  //
+  // Registering on demand needs no restriction at all, so there is nothing to
+  // reject. (The vision toolkit restricts a genuinely global activation tool,
+  // which is why the same call works there.)
+  /** agent -> disposers for the tools registered into it. */
   const mounted = new Map();
 
-  function attach(agent) {
-    if (agent === undefined || mounted.has(agent)) return;
-    const disposers = [agent.ctx.tools.register(definition)];
-    // `restrict` returns the disposer that LIFTS the restriction, so holding it
-    // is what lets the skill reveal the tool later.
-    const reveal = agent.ctx.tools.restrict({ deny: [TOOL_NAME] });
-    mounted.set(agent, { disposers, reveal });
+  function revealFor(agent) {
+    if (agent === undefined || agent === null || mounted.has(agent)) return;
+    const tools = agent.ctx?.tools;
+    if (tools === undefined) return;
+    mounted.set(agent, [tools.register(definition)]);
   }
 
   function detach(agent) {
-    const state = mounted.get(agent);
-    if (state === undefined) return;
+    const disposers = mounted.get(agent);
+    if (disposers === undefined) return;
     mounted.delete(agent);
-    state.reveal?.();
-    for (const dispose of state.disposers) {
+    for (const dispose of disposers) {
       try {
         dispose();
       } catch {
@@ -161,17 +170,8 @@ function apply(ctx) {
     }
   }
 
-  function revealFor(agent) {
-    const state = mounted.get(agent);
-    if (state?.reveal === undefined) return;
-    state.reveal();
-    // Cleared so a second skill call is a no-op rather than a double dispose.
-    state.reveal = undefined;
-  }
-
   ctx.effect(() => {
     const offs = [
-      ctx.on("agent/created", ({ agent }) => attach(agent)),
       ctx.on("agent/disposed", ({ agent }) => detach(agent)),
       ctx.on("tools/result", (exec, result) => {
         if (result?.isError !== false) return;
@@ -179,23 +179,19 @@ function apply(ctx) {
         const args = exec.arguments;
         if (args === null || typeof args !== "object") return;
         if (args.name !== SKILL_NAME) return;
-        revealFor(exec.agent);
+        try {
+          revealFor(exec.agent);
+        } catch {
+          // A registry that refuses the registration leaves the agent without
+          // the tool; it must never take down the tool-result pipeline.
+        }
       }),
     ];
-
-    // Agents that already exist when this plugin loads (a reload, or HMR) never
-    // emit `agent/created` again, so they are attached directly.
-    try {
-      for (const agent of ctx.agents.list?.() ?? []) attach(agent);
-    } catch {
-      // A registry that cannot list yet still yields agents through the event.
-    }
-
     return () => {
       for (const off of offs) off();
       for (const agent of [...mounted.keys()]) detach(agent);
     };
-  }, "file-canvas: per-agent tool mounting");
+  }, "file-canvas: reveal show_file when the skill loads");
 }
 
 export { apply, inject, name };
