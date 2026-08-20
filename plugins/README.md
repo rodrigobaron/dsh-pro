@@ -353,6 +353,37 @@ system-prompt section — was already English. The browser half keeps both
 dictionaries and switches on `lang`, so Chinese stays available and is simply
 no longer the default.
 
+### Bing ignores search operators
+
+Bing does not honour `site:`, `filetype:` or `inurl:` for cookieless requests.
+Verified with two header profiles including a full browser fingerprint: it
+echoes the query back in `og:title`, then returns generic entity results. It
+cannot be fixed from here.
+
+What makes it worth a warning is that **it does not fail**. It returns a
+confident, healthy-looking result set for a different query, so the automatic
+fallback chain never fires and nothing downstream can tell. On
+`site:linkedin.com/in Rodrigo Baron machine learning`, Bing returned ten Olivia
+Rodrigo results; `tavily` and `exa` both returned the intended profile first.
+
+Only the model can route around this, so the system-prompt section names the
+limitation and the engines to use instead.
+
+Bing results also used to carry `bing.com/ck/a?` redirect URLs rather than the
+site found, because every organic result is wrapped in a redirect and the
+scraper took the first href in the block. That broke `web_fetch` on a result,
+broke dedup, and hid the domain. The build now decodes the destination from the
+redirect's base64 `u` parameter, with `<cite>` as a fallback.
+
+### Settings are durable — the patch only seeds a fresh install
+
+`cordis.patch.yml` supplies the **initial** value of the settings namespace.
+Once the namespace exists, the stored value wins and changing the patch does
+nothing. So a default changed here reaches a new install but not an existing
+one, and the engine actually in use is whatever **Settings -> Plugins -> Free
+Search** says. Check there first when behaviour does not match the defaults
+documented above.
+
 ### SearXNG needs your own instance
 
 Upstream ships six public SearXNG instances and none of them work. It is not

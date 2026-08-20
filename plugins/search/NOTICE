@@ -42,6 +42,24 @@ retargeted to `@my-dsh/search`. The `/api/dsh-free-search-settings` bridge
 prefix is deliberately left alone: host and client must agree on it, and it is
 an internal path rather than an identity.
 
+Bing results carry real URLs. Every organic Bing result is wrapped in a
+bing.com/ck/a redirect and the scraper took the first href in the block, so the
+agent received "https://www.bing.com/ck/a?!&&p=..." for every result instead of
+the site found. That breaks web_fetch on a result, breaks dedup by URL, and
+hides the domain a model would judge a source by. The destination is carried in
+the base64 `u` parameter (Bing prefixes it "a1"), with <cite> as a fallback.
+
+Bing's operator blindness is stated to the model. For cookieless requests Bing
+ignores site:, filetype: and inurl: — verified with two header profiles
+including a full browser fingerprint; it echoes the query in og:title and
+returns generic entity results anyway. It cannot be fixed from here, and worse,
+it does not fail: it returns a confident, healthy-looking result set for a
+different query, so the automatic fallback chain never fires. On
+"site:linkedin.com/in Rodrigo Baron machine learning" Bing returned ten Olivia
+Rodrigo results while tavily and exa both returned the intended profile first.
+Only the model can route around this, so the system-prompt section names the
+limitation and the engines to use instead.
+
 SearXNG is bring-your-own-instance. Upstream ships six public instances, and
 none of them work — not because of transient rate limiting, but because
 SearXNG disables the JSON output format by default and its bot limiter

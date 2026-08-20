@@ -78,6 +78,61 @@ host = rewrite(host, 'options?.bingMarket ?? "zh-CN"', 'options?.bingMarket ?? "
 // means DuckDuckGo's own default; naming it keeps English results English.
 host = rewrite(host, 'region: z.string(),', 'region: z.string().default("us-en"),', 'DuckDuckGo region default')
 
+// ── host half: hand back real URLs, not Bing's redirector ───────────────────
+// Every organic Bing result is wrapped in a bing.com/ck/a redirect, and the
+// scraper takes the first href in the block — so the agent receives
+// "https://www.bing.com/ck/a?!&&p=..." for every single result instead of the
+// site it actually found. That breaks web_fetch on the result, breaks dedup by
+// URL, and hides the domain the model would otherwise judge a source by.
+//
+// The destination is right there in the base64 `u` parameter (Bing prefixes it
+// "a1"); <cite> carries a display-formatted copy as a fallback. Verified
+// against live Bing HTML: all ten blocks decode to their true URLs.
+host = rewrite(
+  host,
+  'async function searchBing(query, maxResults, options, signal) {',
+  `function resolveBingUrl(href, block) {
+  const raw = href.replace(/&amp;/g, "&");
+  const encoded = /[?&]u=([^&"]+)/.exec(raw);
+  if (encoded) {
+    const payload = encoded[1].startsWith("a1") ? encoded[1].slice(2) : encoded[1];
+    try {
+      const decoded = Buffer.from(payload, "base64url").toString("utf8");
+      if (/^https?:\\/\\//.test(decoded)) return decoded;
+    } catch {
+      // Not base64 after all; fall through to <cite>.
+    }
+  }
+  const cite = /<cite[^>]*>([\\s\\S]*?)<\\/cite>/.exec(block);
+  if (cite) {
+    const text = stripTags(cite[1]).replace(/\\s*\u203a\\s*/g, "/").replace(/\\s+/g, "");
+    if (/^https?:\\/\\//.test(text) && !text.includes("\u2026")) return text;
+  }
+  return raw;
+}
+
+async function searchBing(query, maxResults, options, signal) {`,
+  'Bing redirect-URL resolver',
+)
+host = rewrite(host, 'url: hrefMatch[1],', 'url: resolveBingUrl(hrefMatch[1], block),', 'Bing result URL')
+
+// Bing ignores site:, filetype: and friends for cookieless requests. Verified
+// with two header profiles including a full browser fingerprint: it echoes the
+// query back in og:title and then returns generic entity results anyway.
+//
+// The dangerous part is that it does not FAIL. It returns a confident, healthy
+// looking result set for a completely different query, so the automatic
+// fallback chain never fires and nothing downstream can tell. Measured on
+// "site:linkedin.com/in Rodrigo Baron machine learning": Bing returned ten
+// Olivia Rodrigo results, while tavily and exa both returned the intended
+// profile first. Only the model can avoid this, so the model is told.
+host = rewrite(
+  host,
+  '"- bing (Bing) - FREE, no key (most stable)",',
+  '"- bing (Bing) - FREE, no key (most stable for plain queries, but SILENTLY IGNORES site:/filetype:/inurl: operators and returns unfiltered results anyway - for an operator query use ddg, tavily or exa)",',
+  'Bing line in the system-prompt section',
+)
+
 // ── host half: SearXNG is bring-your-own-instance ────────────────────────────
 // Upstream ships six public instances. None of them work, and not because of
 // transient rate limiting: SearXNG disables the JSON output format by default
