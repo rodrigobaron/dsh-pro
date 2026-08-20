@@ -3,4 +3,4 @@
 # `./client` export because the package declares `dsh.client`.
 - insert:
     - id: context
-      name: '@my-dsh/context'
+      name: '@dsh-pro/context'

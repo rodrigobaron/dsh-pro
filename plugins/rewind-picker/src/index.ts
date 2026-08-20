@@ -1,9 +1,9 @@
 /**
- * @my-dsh/rewind-picker host half — deliberately empty.
+ * @dsh-pro/rewind-picker host half — deliberately empty.
  *
  * The `/rewind` command and its picker are entirely browser-side: the command
  * opens an overlay, the overlay reads the conversation snapshot it is already
- * given, and the confirmation posts to @my-dsh/rewind's existing route. No
+ * given, and the confirmation posts to @dsh-pro/rewind's existing route. No
  * host service is needed.
  *
  * The row still has to exist, because mounting it is what qualifies the

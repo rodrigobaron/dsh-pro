@@ -1,5 +1,5 @@
 {
-  "name": "@my-dsh/rewind-picker",
+  "name": "@dsh-pro/rewind-picker",
   "description": "The /rewind slash command: pick which message to rewind to from a list, instead of hunting for its button.",
   "version": "0.1.0",
   "author": "Rodrigo Baron <baron.rodrigo0@gmail.com>",

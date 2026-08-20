@@ -14,4 +14,4 @@
 # and a slot missed while it was down stays missed rather than backfilling.
 - insert:
     - id: routines
-      name: '@my-dsh/routines'
+      name: '@dsh-pro/routines'

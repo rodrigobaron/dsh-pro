@@ -39,7 +39,7 @@ Two consequences worth stating plainly:
     is. This is the one real difference from the rewind in Claude Code, which
     also restores the working tree.
 
-Renamed to @my-dsh/rewind, and the route with it: POST /recall is now
+Renamed to @dsh-pro/rewind, and the route with it: POST /recall is now
 POST /rewind. The client bundle's __ModuleLoader__ id follows the package name,
 because the web boot manifest looks a bundle up by that name. The `recall` node
 kind and the `session/recall` event definition in the browser half are left
@@ -49,6 +49,6 @@ English only. Upstream registers a Simplified Chinese dictionary alongside
 English; the English one is now registered under both locale ids.
 
 The `/rewind` command and its message picker are not upstream at all. They live
-in the companion @my-dsh/rewind-picker package, which drives this route.
+in the companion @dsh-pro/rewind-picker package, which drives this route.
 
 The MIT License text, including its copyright notice, is in LICENSE.

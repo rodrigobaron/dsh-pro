@@ -1,5 +1,5 @@
 /**
- * @my-dsh/deep-research client half: discoverability only.
+ * @dsh-pro/deep-research client half: discoverability only.
  *
  * The command itself is expanded on the host, so this registers nothing that
  * intercepts Enter — typing `/deep-research a topic` sends an ordinary

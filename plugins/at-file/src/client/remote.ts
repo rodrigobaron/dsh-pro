@@ -13,7 +13,7 @@ export type { FileEntry } from '../contract.ts'
 
 /** The atFile Remote namespace's client contribution. */
 export const AT_FILE_REMOTE: TypertRemoteContribution = {
-  package: '@my-dsh/at-file',
+  package: '@dsh-pro/at-file',
   descriptors: AT_FILE_INVOCATIONS,
 }
 

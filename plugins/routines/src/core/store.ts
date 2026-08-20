@@ -87,17 +87,17 @@ export function parseLedger(raw: string | null): JobRecord[] {
   try {
     parsed = JSON.parse(raw)
   } catch (error) {
-    console.error('[@my-dsh/routines] persisted job ledger is not valid JSON; starting empty', error)
+    console.error('[@dsh-pro/routines] persisted job ledger is not valid JSON; starting empty', error)
     return []
   }
   if (!Array.isArray(parsed)) {
-    console.error('[@my-dsh/routines] persisted job ledger is not an array; starting empty')
+    console.error('[@dsh-pro/routines] persisted job ledger is not an array; starting empty')
     return []
   }
   const jobs: JobRecord[] = []
   for (const row of parsed) {
     if (!isJobRecordShape(row)) {
-      console.warn('[@my-dsh/routines] dropping invalid job row from persisted ledger', row)
+      console.warn('[@dsh-pro/routines] dropping invalid job row from persisted ledger', row)
       continue
     }
     const job: JobRecord = { ...row, status: normalizeStatus(row.status) }
@@ -132,7 +132,7 @@ export class LocalStorageJobStore implements JobStore {
     try {
       return parseLedger(this.storage.getItem(this.key))
     } catch (error) {
-      console.error('[@my-dsh/routines] job ledger read failed; starting empty', error)
+      console.error('[@dsh-pro/routines] job ledger read failed; starting empty', error)
       return []
     }
   }
@@ -142,7 +142,7 @@ export class LocalStorageJobStore implements JobStore {
     try {
       this.storage.setItem(this.key, JSON.stringify(jobs))
     } catch (error) {
-      console.error('[@my-dsh/routines] job ledger write failed (persistence skipped)', error)
+      console.error('[@dsh-pro/routines] job ledger write failed (persistence skipped)', error)
     }
   }
 
@@ -151,7 +151,7 @@ export class LocalStorageJobStore implements JobStore {
     try {
       this.storage.removeItem(this.key)
     } catch (error) {
-      console.error('[@my-dsh/routines] job ledger clear failed', error)
+      console.error('[@dsh-pro/routines] job ledger clear failed', error)
     }
   }
 }

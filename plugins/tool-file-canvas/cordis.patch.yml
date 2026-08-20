@@ -7,8 +7,8 @@
 # The tool stays restricted until the model loads the `file-artifacts` skill.
 - insert:
     - id: tool-file-canvas
-      name: '@my-dsh/tool-file-canvas'
+      name: '@dsh-pro/tool-file-canvas'
 
 - insert:
     - id: host-file-canvas-route
-      name: '@my-dsh/tool-file-canvas/route'
+      name: '@dsh-pro/tool-file-canvas/route'

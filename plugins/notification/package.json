@@ -1,5 +1,5 @@
 {
-  "name": "@my-dsh/notification",
+  "name": "@dsh-pro/notification",
   "description": "Desktop notifications when a session finishes a turn, with per-outcome toggles and include/exclude keyword rules.",
   "version": "0.1.0",
   "author": "Rodrigo Baron <baron.rodrigo0@gmail.com>",

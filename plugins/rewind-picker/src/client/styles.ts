@@ -199,7 +199,7 @@ export function ensureStyles(): void {
   style.id = STYLE_ID
   // Claim the tag, so the plugin inventory does not attribute these rules to
   // whichever plugin happened to be loading when they were injected.
-  style.dataset.plugin = '@my-dsh/rewind-picker'
+  style.dataset.plugin = '@dsh-pro/rewind-picker'
   style.textContent = CSS
   document.head.appendChild(style)
 }

@@ -1,5 +1,5 @@
 /**
- * @my-dsh/deep-research host half.
+ * @dsh-pro/deep-research host half.
  *
  * Two things: the `deep-research` skill (the methodology) and the
  * `/deep-research <topic>` expansion (the way to invoke it).

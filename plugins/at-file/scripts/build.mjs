@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 /**
- * @my-dsh/at-file build.
+ * @dsh-pro/at-file build.
  *
  *   lib/index.js  — host half: src/ bundled to plain ESM.
  *   lib/client.js — client half: src/client/ bundled to CJS, then wrapped in
  *                   `window.__ModuleLoader__.load({ id, factory })`. The
  *                   harness serves that file verbatim instead of bundling it,
  *                   and the web boot manifest looks a bundle up by the
- *                   INSTALLED PACKAGE NAME — so the id is `@my-dsh/at-file`,
+ *                   INSTALLED PACKAGE NAME — so the id is `@dsh-pro/at-file`,
  *                   not the upstream `dsh-at-file`.
  *
  * Harness packages, cordis, and react stay external and arrive through the
@@ -72,7 +72,7 @@ await writeFile(join(ROOT, 'lib', 'client.js'), [
 const host = await readFile(join(ROOT, 'lib', 'index.js'), 'utf8')
 const client = await readFile(join(ROOT, 'lib', 'client.js'), 'utf8')
 for (const [label, source, expected] of [
-  ['lib/index.js', host, ['function apply', 'TYPERT_MANIFEST', '@my-dsh/at-file#atFile/search']],
+  ['lib/index.js', host, ['function apply', 'TYPERT_MANIFEST', '@dsh-pro/at-file#atFile/search']],
   ['lib/client.js', client, ['__ModuleLoader__', `id: "${pkg.name}"`, 'atFile']],
 ]) {
   for (const needle of expected) {

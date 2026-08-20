@@ -6,4 +6,4 @@
 
 - insert:
     - id: ui-layout-wide
-      name: '@my-dsh/client-ui-layout-wide'
+      name: '@dsh-pro/client-ui-layout-wide'

@@ -1,5 +1,5 @@
 {
-  "name": "@my-dsh/tool-file-canvas",
+  "name": "@dsh-pro/tool-file-canvas",
   "description": "Host half of the file canvas: the `show_file` tool plus a contained file-read route serving any workspace file to the browser.",
   "version": "0.1.0",
   "author": "Rodrigo Baron <baron.rodrigo0@gmail.com>",

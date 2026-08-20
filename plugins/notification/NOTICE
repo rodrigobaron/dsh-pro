@@ -9,7 +9,7 @@ projection, and the browser half watches the session list, applies the
 persisted rules, and calls the Notification API. The differences are packaging
 and this repository's conventions:
 
-  - Renamed to @my-dsh/notification. The client bundle's __ModuleLoader__ id
+  - Renamed to @dsh-pro/notification. The client bundle's __ModuleLoader__ id
     follows, because the web boot manifest looks a bundle up by the installed
     package name. The projection key stays `notification`: it is the seam's
     key, not a package identity.
@@ -45,7 +45,7 @@ and this repository's conventions:
     `dsh plugin add`, which this repository does not use, and the second is a
     translation this repository does not carry.
 
-Type-checking resolves the harness the same way @my-dsh/at-file does:
+Type-checking resolves the harness the same way @dsh-pro/at-file does:
 scripts/link-harness.mjs symlinks the INSTALLED harness into node_modules
 before tsc runs, so the types can never drift from the deployment.
 

@@ -103,7 +103,7 @@ export function ensureStyles(): void {
   if (document.getElementById(STYLE_ID) !== null) return
   const style = document.createElement('style')
   style.id = STYLE_ID
-  style.dataset.plugin = '@my-dsh/routines'
+  style.dataset.plugin = '@dsh-pro/routines'
   style.textContent = CSS
   document.head.appendChild(style)
 }

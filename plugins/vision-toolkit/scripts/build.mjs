@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * @my-dsh/vision-toolkit build — a repackaging step, not a compile.
+ * @dsh-pro/vision-toolkit build — a repackaging step, not a compile.
  *
  * Upstream's own build needs its full toolchain (a Python bootstrap, an
  * upstream-manifest check, a skill verification, and three tsc passes), so

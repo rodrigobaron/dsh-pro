@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * @my-dsh/deep-research build.
+ * @dsh-pro/deep-research build.
  *
  *   lib/index.js   — host half: the skill and the command expansion.
  *   lib/command.js — the command parser, emitted separately so the test suite

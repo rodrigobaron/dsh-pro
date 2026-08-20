@@ -9,7 +9,7 @@ filter settings, and the pre-step <workspace-reference> marker all work as
 upstream designed them. The differences are packaging and this repository's
 conventions:
 
-  - Renamed to @my-dsh/at-file, and the Typert identities follow. Upstream
+  - Renamed to @dsh-pro/at-file, and the Typert identities follow. Upstream
     keys its manifest, invocation ids, and type symbols under the package name
     `dsh-at-file`; the registry rejects duplicate package-face keys and
     duplicate invocation ids, so a fork that kept them could not be installed

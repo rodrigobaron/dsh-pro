@@ -10,4 +10,4 @@
 # wrote during a rewound turn stays exactly as it is.
 - insert:
     - id: rewind
-      name: '@my-dsh/rewind'
+      name: '@dsh-pro/rewind'

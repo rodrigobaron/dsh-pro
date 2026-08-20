@@ -1,5 +1,5 @@
 /**
- * @my-dsh/browser — Playwright browser automation as a PROFILE row.
+ * @dsh-pro/browser — Playwright browser automation as a PROFILE row.
  *
  * A profile row, not an agent-preset row, so browsing is available under every
  * preset instead of only one. This repository owns no preset, and a plugin

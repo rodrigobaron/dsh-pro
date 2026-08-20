@@ -1,5 +1,5 @@
 {
-  "name": "@my-dsh/at-file",
+  "name": "@dsh-pro/at-file",
   "description": "@path references in the composer: search workspace paths and hand the agent a path, without injecting file content.",
   "version": "0.1.0",
   "author": "Rodrigo Baron <baron.rodrigo0@gmail.com>",

@@ -1,5 +1,5 @@
 /**
- * @my-dsh/routines client half: a Routines section on the settings page.
+ * @dsh-pro/routines client half: a Routines section on the settings page.
  *
  * Upstream mounts a sidebar entry and a board; this build does neither, so the
  * conversation surface stays exactly as it was. Everything here reads and

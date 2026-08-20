@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * @my-dsh/rewind build.
+ * @dsh-pro/rewind build.
  *
  *   lib/index.js  — host half: OURS, compiled from src/. Upstream's prebuilt
  *                   host calls session.recall(), which no published harness
@@ -9,7 +9,7 @@
  *   lib/client.js — client half: vendor/client.js, repackaged the same way.
  *
  * Nothing is compiled here. The `/rewind` command and its picker live in the
- * companion @my-dsh/rewind-picker package, which drives this plugin's route.
+ * companion @dsh-pro/rewind-picker package, which drives this plugin's route.
  */
 import { build } from 'esbuild'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
@@ -89,7 +89,7 @@ client = rewrite(
 // Claim the stylesheet, so the plugin inventory does not attribute these rules
 // to whichever plugin happened to be loading.
 client = rewrite(client, 'tag.dataset.plugin = "dsh-recall";', `tag.dataset.plugin = ${JSON.stringify(pkg.name)};`, 'stylesheet owner attribute')
-client = rewrite(client, 'const CSS_TAG = "dsh-recall/Recall.module.css";', 'const CSS_TAG = "@my-dsh/rewind/Rewind.module.css";', 'stylesheet tag')
+client = rewrite(client, 'const CSS_TAG = "dsh-recall/Recall.module.css";', 'const CSS_TAG = "@dsh-pro/rewind/Rewind.module.css";', 'stylesheet tag')
 client = rewrite(client, '"[dsh-recall] draft restore failed:"', '"[rewind] draft restore failed:"', 'log prefix')
 
 // User-facing copy follows the plugin's name. Upstream says "recall"; the

@@ -1,5 +1,5 @@
 {
-  "name": "@my-dsh/context",
+  "name": "@dsh-pro/context",
   "description": "Context insight and management: a context dashboard tab and a /context command showing how the agent's context is composed and how it evolves.",
   "version": "0.17.0",
   "author": "bowenliang123",

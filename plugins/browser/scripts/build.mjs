@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * @my-dsh/browser build.
+ * @dsh-pro/browser build.
  *
  *   lib/index.js — host half: src/ bundled to plain ESM.
  *

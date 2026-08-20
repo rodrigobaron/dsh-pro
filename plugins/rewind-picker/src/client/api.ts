@@ -1,5 +1,5 @@
 /**
- * Talking to @my-dsh/rewind's host route, and putting the rewound text back
+ * Talking to @dsh-pro/rewind's host route, and putting the rewound text back
  * in the composer.
  *
  * Both halves of the feature POST the same `/rewind` route; this package owns

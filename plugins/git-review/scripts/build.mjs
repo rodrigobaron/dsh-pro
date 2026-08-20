@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * @my-dsh/git-review build.
+ * @dsh-pro/git-review build.
  *
  *   lib/index.js  — host half: src/host/ bundled to plain ESM.
  *   lib/client.js — client half: src/client/ bundled to CJS, then wrapped in

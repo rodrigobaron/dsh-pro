@@ -1,5 +1,5 @@
 {
-  "name": "@my-dsh/client-ui-file-canvas",
+  "name": "@dsh-pro/client-ui-file-canvas",
   "description": "File canvas: renders any workspace file \u2014 source, Markdown, HTML, images, PDFs \u2014 in the details side panel.",
   "version": "0.1.0",
   "author": "Rodrigo Baron <baron.rodrigo0@gmail.com>",

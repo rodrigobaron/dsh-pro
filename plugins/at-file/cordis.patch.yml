@@ -4,4 +4,4 @@
 # export because the package declares `dsh.client`.
 - insert:
     - id: at-file
-      name: '@my-dsh/at-file'
+      name: '@dsh-pro/at-file'

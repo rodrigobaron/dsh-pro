@@ -14,7 +14,7 @@ behaviour is modified; the two adaptations are packaging concerns:
     ERR_MODULE_NOT_FOUND.
 
   - The browser bundle's `__ModuleLoader__` id is rewritten from
-    "dsh-archived-sessions" to "@my-dsh/archived-sessions", because the web boot
+    "dsh-archived-sessions" to "@dsh-pro/archived-sessions", because the web boot
     manifest looks a bundle up by the installed package name.
 
 The MIT License text, including its copyright notice, is in LICENSE.

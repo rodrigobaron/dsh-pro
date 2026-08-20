@@ -1,5 +1,5 @@
 /**
- * @my-dsh/git-review — client half.
+ * @dsh-pro/git-review — client half.
  *
  * Registers a "Git" tab in the conversation view ring, beside Chat,
  * Trajectory, and Context.

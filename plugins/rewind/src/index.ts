@@ -1,5 +1,5 @@
 /**
- * @my-dsh/rewind host half: POST /rewind.
+ * @dsh-pro/rewind host half: POST /rewind.
  *
  * Rewinding removes a message — and everything after it — from the history the
  * MODEL sees. It never touches the filesystem, and it never deletes a log

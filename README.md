@@ -266,7 +266,7 @@ off, and holds the filename filters (exact or regex, global or per-workspace).
 
 ### Naming
 
-The Typert identities are renamed to `@my-dsh/at-file`. The registry rejects
+The Typert identities are renamed to `@dsh-pro/at-file`. The registry rejects
 duplicate package-face keys and duplicate invocation ids, so a fork keeping
 upstream's `dsh-at-file` keys could not be installed beside the original. Both
 halves build from one `src/contract.ts`, so they cannot drift apart.
@@ -291,7 +291,7 @@ that is not the one running — worse than not checking.
 So `typecheck` checks against the harness that IS running:
 
 ```bash
-npm run typecheck --workspace=@my-dsh/at-file
+npm run typecheck --workspace=@dsh-pro/at-file
 ```
 
 `scripts/link-harness.mjs` symlinks the installed harness packages into
@@ -505,7 +505,7 @@ environment or settings.
 
 The plugin also now claims its own `<style>` tag with `data-plugin`. Upstream
 leaves it unset and the harness then attributes the stylesheet to whichever
-plugin happened to be loading — it showed up in the DOM as `@my-dsh/git-review`
+plugin happened to be loading — it showed up in the DOM as `@dsh-pro/git-review`
 owning the notification rules.
 
 ## Rewinding the conversation
@@ -546,7 +546,7 @@ Two consequences follow from the mechanism, and both are deliberate:
 - **Nothing is deleted.** Every original event stays in the log and no file is
   touched. `planRewind` is the part where an off-by-one would shadow the wrong
   range irreversibly, so it is pure and unit-tested
-  (`npm run test --workspace=@my-dsh/rewind`).
+  (`npm run test --workspace=@dsh-pro/rewind`).
 
 ### Hiding the rewound messages
 
@@ -807,7 +807,7 @@ parser rejects it.
 
 ### Search is snippet-only
 
-Searches run through `@my-dsh/search`'s free engines: `web_search` (routed
+Searches run through `@dsh-pro/search`'s free engines: `web_search` (routed
 there by the `web` seam), plus `advanced_search` for time filtering and
 `platform_search` for GitHub and Reddit.
 

@@ -5,7 +5,7 @@
  * the settings page's Routines section renders and the host ticker fires — one
  * ledger, three doorways (tool, WebUI, file).
  *
- * @module @my-dsh/routines/tools
+ * @module @dsh-pro/routines/tools
  */
 import { defineTool, type JsonValue } from '@deepseek-ai/dsh-tools'
 import { randomUUID } from 'node:crypto'

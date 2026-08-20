@@ -5,4 +5,4 @@
 # export because the package declares `dsh.client`.
 - insert:
     - id: notification
-      name: '@my-dsh/notification'
+      name: '@dsh-pro/notification'

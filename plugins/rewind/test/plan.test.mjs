@@ -5,7 +5,7 @@
  * mistake that would remove more of the model's history than asked and cannot
  * be undone. It is pure, so it is cheap to pin down here.
  *
- * Run: npm run test --workspace=@my-dsh/rewind (after a build).
+ * Run: npm run test --workspace=@dsh-pro/rewind (after a build).
  */
 import { planRewind, markerText } from '../lib/index.js'
 let pass = 0, fail = 0

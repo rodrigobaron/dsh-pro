@@ -1,4 +1,4 @@
-// @my-dsh/client-ui-file-canvas — browser half of the file canvas.
+// @dsh-pro/client-ui-file-canvas — browser half of the file canvas.
 //
 // Renders any workspace file in the `details` side panel. Two things put a file
 // there, and both arrive as the same envelope so there is one render path:
@@ -20,7 +20,7 @@
 import { CodeBlock, MarkdownText, IconCloseOutline16, IconCodeOutline16, IconDownloadOutline16 } from "@deepseek-ai/dsh-client-ui-primitives";
 import { createElement as h, useEffect, useRef, useState, useSyncExternalStore } from "react";
 
-const name = "@my-dsh/client-ui-file-canvas";
+const name = "@dsh-pro/client-ui-file-canvas";
 const inject = ["slots", "layout", "sessions"];
 
 /** Host route serving envelopes and raw bytes. Must match the route plugin. */

@@ -1,5 +1,5 @@
 {
-  "name": "@my-dsh/search",
+  "name": "@dsh-pro/search",
   "description": "Free web search: ten engines with automatic fallback and no API key required, plus time-filtered search and GitHub/Reddit platform search.",
   "version": "0.1.0",
   "author": "Rodrigo Baron <baron.rodrigo0@gmail.com>",

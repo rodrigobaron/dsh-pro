@@ -109,7 +109,7 @@ export const atFileSettingsUpdateSchema = z.discriminatedUnion('field', [
 /** The atFile Remote namespace's strict invocation descriptors. */
 export const AT_FILE_INVOCATIONS: readonly InvocationDescriptor[] = [
   {
-    id: '@my-dsh/at-file#atFile/search',
+    id: '@dsh-pro/at-file#atFile/search',
     service: 'atFile',
     namespace: 'atFile',
     method: 'search',
@@ -128,12 +128,12 @@ export const AT_FILE_INVOCATIONS: readonly InvocationDescriptor[] = [
     cancellation: { parameter: 'signal' },
     result: {
       mode: 'strict',
-      typeSymbol: '@my-dsh/at-file#FileEntry[]',
+      typeSymbol: '@dsh-pro/at-file#FileEntry[]',
       schema: z.array(fileEntrySchema),
     },
   },
   {
-    id: '@my-dsh/at-file#atFile/getSettings',
+    id: '@dsh-pro/at-file#atFile/getSettings',
     service: 'atFile',
     namespace: 'atFile',
     method: 'getSettings',
@@ -141,12 +141,12 @@ export const AT_FILE_INVOCATIONS: readonly InvocationDescriptor[] = [
     parameters: [],
     result: {
       mode: 'strict',
-      typeSymbol: '@my-dsh/at-file#AtFileSettings',
+      typeSymbol: '@dsh-pro/at-file#AtFileSettings',
       schema: atFileSettingsSchema,
     },
   },
   {
-    id: '@my-dsh/at-file#atFile/updateSettings',
+    id: '@dsh-pro/at-file#atFile/updateSettings',
     service: 'atFile',
     namespace: 'atFile',
     method: 'updateSettings',
@@ -158,14 +158,14 @@ export const AT_FILE_INVOCATIONS: readonly InvocationDescriptor[] = [
         source: 'json',
         codec: {
           mode: 'strict',
-          typeSymbol: '@my-dsh/at-file#AtFileSettingsUpdate',
+          typeSymbol: '@dsh-pro/at-file#AtFileSettingsUpdate',
           schema: atFileSettingsUpdateSchema,
         },
       },
     ],
     result: {
       mode: 'strict',
-      typeSymbol: '@my-dsh/at-file#AtFileSettings',
+      typeSymbol: '@dsh-pro/at-file#AtFileSettings',
       schema: atFileSettingsSchema,
     },
   },

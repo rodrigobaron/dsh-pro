@@ -3,4 +3,4 @@
 # package declares `dsh.client`.
 - insert:
     - id: git-review
-      name: '@my-dsh/git-review'
+      name: '@dsh-pro/git-review'

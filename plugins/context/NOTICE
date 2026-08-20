@@ -4,7 +4,7 @@ Apache License 2.0. The original project lives at:
     https://github.com/bowenliang123/dsh-context
 
 Changes from upstream:
-  - renamed to @my-dsh/context so it installs alongside the other plugins in
+  - renamed to @dsh-pro/context so it installs alongside the other plugins in
     this repository under one installer;
   - removed the "Plugin Info" card from the context dashboard, along with the
     modules that fed it (client/meta.ts, client/latestVersion.ts,

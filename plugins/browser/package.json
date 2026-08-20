@@ -1,5 +1,5 @@
 {
-  "name": "@my-dsh/browser",
+  "name": "@dsh-pro/browser",
   "description": "Skill-gated Playwright browser automation: semantic locators, multi-tab navigation, bounded page snapshots, and screenshots that render in the artifact canvas.",
   "version": "0.1.0",
   "author": "Rodrigo Baron <baron.rodrigo0@gmail.com>",

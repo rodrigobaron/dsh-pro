@@ -1,4 +1,4 @@
-// @my-dsh/tool-file-canvas/route — the contained file route (web context).
+// @dsh-pro/tool-file-canvas/route — the contained file route (web context).
 //
 // `GET /canvas/file?path=…` lets the browser open a path the model never
 // touched (clicking a path in the transcript) and stream image/PDF bytes rather

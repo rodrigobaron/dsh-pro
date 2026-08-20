@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * @my-dsh/routines build.
+ * @dsh-pro/routines build.
  *
  *   lib/index.js  — host half: the cron engine. Ported from
  *                   reference/dsh-timer-agent, which ships real sources.

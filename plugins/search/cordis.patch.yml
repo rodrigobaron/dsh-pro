@@ -8,7 +8,7 @@
 # fresh install starts from.
 - insert:
     - id: web-search-free
-      name: '@my-dsh/search'
+      name: '@dsh-pro/search'
       config:
         provider: keenable
 

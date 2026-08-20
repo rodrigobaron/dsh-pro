@@ -45,7 +45,7 @@ Identity. The browser bundle names itself three times: the `__ModuleLoader__`
 loader id (the web boot manifest looks a bundle up by the installed package
 name), a `settings.plugin.item` slot entry id (which must be unique within its
 slot), and a `data-plugin` attribute on its injected stylesheet. All three are
-retargeted to `@my-dsh/search`. The `/api/dsh-free-search-settings` bridge
+retargeted to `@dsh-pro/search`. The `/api/dsh-free-search-settings` bridge
 prefix is deliberately left alone: host and client must agree on it, and it is
 an internal path rather than an identity.
 

@@ -3,4 +3,4 @@
 # package declares `dsh.client`.
 - insert:
     - id: archived-sessions
-      name: '@my-dsh/archived-sessions'
+      name: '@dsh-pro/archived-sessions'

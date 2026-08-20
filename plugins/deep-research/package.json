@@ -1,5 +1,5 @@
 {
-  "name": "@my-dsh/deep-research",
+  "name": "@dsh-pro/deep-research",
   "description": "A /deep-research command and the skill behind it: a controlled multi-modality search loop run as a workflow.",
   "version": "0.1.0",
   "author": "Rodrigo Baron <baron.rodrigo0@gmail.com>",

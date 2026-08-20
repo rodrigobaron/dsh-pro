@@ -1,7 +1,7 @@
 /**
- * @my-dsh/rewind-picker client half: the `/rewind` command and its dialog.
+ * @dsh-pro/rewind-picker client half: the `/rewind` command and its dialog.
  *
- * A companion to @my-dsh/rewind rather than part of it. That package's client
+ * A companion to @dsh-pro/rewind rather than part of it. That package's client
  * is upstream's prebuilt bundle — it shadows the framework's user-bubble
  * renderer to put a button on every message, and cannot be extended without
  * rewriting it. This package adds the other entry point, and drives the same

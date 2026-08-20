@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * @my-dsh/archived-sessions build — a repackaging step, not a compile.
+ * @dsh-pro/archived-sessions build — a repackaging step, not a compile.
  *
  * Upstream ships this plugin prebuilt with no sources, so vendor/ holds its
  * published output verbatim and this script adapts it to install alongside the

@@ -1,4 +1,4 @@
-// @my-dsh/tool-file-canvas — the `show_file` tool (profile entry).
+// @dsh-pro/tool-file-canvas — the `show_file` tool (profile entry).
 //
 // This is a PROFILE row, not an agent-preset row, so the tool is available
 // under every preset — standard, code, minimal, anything — instead of only the

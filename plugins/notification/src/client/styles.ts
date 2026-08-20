@@ -270,8 +270,8 @@ export function adoptStyles(): void {
   style.id = STYLE_ID
   // Claim the stylesheet. Upstream leaves this unset, and the harness then
   // attributes the tag to whichever plugin happened to be loading — observed
-  // in the plugin inventory as @my-dsh/git-review owning these rules.
-  style.dataset.plugin = '@my-dsh/notification'
+  // in the plugin inventory as @dsh-pro/git-review owning these rules.
+  style.dataset.plugin = '@dsh-pro/notification'
   style.textContent = cssText
   document.head.appendChild(style)
 }

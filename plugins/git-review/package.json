@@ -1,5 +1,5 @@
 {
-  "name": "@my-dsh/git-review",
+  "name": "@dsh-pro/git-review",
   "description": "Git review tab: inspect the working tree diff, stage, discard, commit, and push without leaving the conversation.",
   "version": "0.1.0",
   "author": "Rodrigo Baron <baron.rodrigo0@gmail.com>",

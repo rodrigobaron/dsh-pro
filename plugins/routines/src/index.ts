@@ -1,9 +1,9 @@
 /**
- * Host loader entry for the @my-dsh/routines plugin — the host-authoritative
+ * Host loader entry for the @dsh-pro/routines plugin — the host-authoritative
  * engine (hermes-agent cron shape): a 60s in-process ticker that fires due
  * jobs through the real agent registry (GUI open or not), a file-backed
  * ledger at ~/.dsh/routines/jobs.json, the `routines` model tool so
- * any conversation can create/manage jobs, and /api/@my-dsh/routines routes
+ * any conversation can create/manage jobs, and /api/@dsh-pro/routines routes
  * the web UI reads and writes through.
  */
 
@@ -24,7 +24,7 @@ export const inject = ['webServer', 'tools', 'systemPrompt', 'agents']
 
 /** Model-facing announcement: plugin presence, capabilities, and limits. */
 export const ROUTINES_GUIDANCE = [
-  'This machine has the @my-dsh/routines plugin installed: a scheduled-agent engine that lives in the dsh web host process.',
+  'This machine has the @dsh-pro/routines plugin installed: a scheduled-agent engine that lives in the dsh web host process.',
   'A 60-second ticker runs as long as `dsh web` is up, so routines fire with the GUI closed. The ledger is ~/.dsh/routines/jobs.json.',
   '',
   'Each routine has a 5-field cron schedule (for example `0 9 * * *`) and one of three targets:',
@@ -84,7 +84,7 @@ export function apply(ctx: Context, config?: Config): void {
       store,
       runner,
       now: () => Date.now(),
-    }), '@my-dsh/routines: tool')
+    }), '@dsh-pro/routines: tool')
 
     const routes = makeRoutes({ store, runner, ctx: host, now: () => Date.now() })
     disposeEngine = () => {
@@ -94,7 +94,7 @@ export function apply(ctx: Context, config?: Config): void {
     const disposeRoutes = ctx.effect(() => {
       const disposers = routes.map(route => ctx.webServer.register(route))
       return () => { for (const dispose of disposers) dispose() }
-    }, '@my-dsh/routines: routes')
+    }, '@dsh-pro/routines: routes')
     // Routes unregister with the engine (single teardown path).
     const engineTeardown = disposeEngine
     disposeEngine = () => {

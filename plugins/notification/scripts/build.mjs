@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 /**
- * @my-dsh/notification build.
+ * @dsh-pro/notification build.
  *
  *   lib/index.js  — host half: src/ bundled to plain ESM.
  *   lib/client.js — client half: src/client/ bundled to CJS, then wrapped in
  *                   `window.__ModuleLoader__.load({ id, factory })`. The
  *                   harness serves that file verbatim instead of bundling it,
  *                   and the web boot manifest looks a bundle up by the
- *                   INSTALLED PACKAGE NAME — so the id is `@my-dsh/notification`,
+ *                   INSTALLED PACKAGE NAME — so the id is `@dsh-pro/notification`,
  *                   not the upstream `dsh-at-file`.
  *
  * Harness packages, cordis, and react stay external and arrive through the

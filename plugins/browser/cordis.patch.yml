@@ -3,4 +3,4 @@
 # tool surface costs nothing under presets that never browse.
 - insert:
     - id: browser
-      name: '@my-dsh/browser'
+      name: '@dsh-pro/browser'

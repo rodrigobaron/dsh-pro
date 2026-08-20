@@ -1,5 +1,5 @@
 {
-  "name": "@my-dsh/vision-toolkit",
+  "name": "@dsh-pro/vision-toolkit",
   "description": "Vision tools for a text-only agent: image Q&A, OCR, grounding, tracing, cropping, foreground extraction, HTML screenshots, and pixel diff.",
   "version": "0.1.35",
   "author": "Anionex",

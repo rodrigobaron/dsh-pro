@@ -5,7 +5,7 @@
  * validated `@path` references at each agent's pre-step boundary. The plugin
  * never reads mentioned file contents. The client half
  * ships in the same package (`./client`); the web server serves it under
- * /plugins/@my-dsh/at-file/client.js.
+ * /plugins/@dsh-pro/at-file/client.js.
  */
 import type { Context } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'

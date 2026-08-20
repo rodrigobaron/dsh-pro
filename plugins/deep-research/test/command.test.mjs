@@ -6,7 +6,7 @@
  * user did not ask for, and a strict one silently ignores a real invocation.
  * It is pure, so it is cheap to pin down.
  *
- * Run: npm run test --workspace=@my-dsh/deep-research
+ * Run: npm run test --workspace=@dsh-pro/deep-research
  */
 import { topicOf, COMMAND } from '../lib/command.js'
 

@@ -7,7 +7,7 @@ Upstream ships real TypeScript sources, so this is a port rather than a
 repackage: src/ is upstream's host-side code with the changes below, compiled
 here with esbuild instead of tsdown.
 
-Renamed throughout to @my-dsh/routines. The route family moved from
+Renamed throughout to @dsh-pro/routines. The route family moved from
 /api/dsh-timer-agent/* to /api/routines/*, the ledger from
 ~/.dsh/timer-agent/jobs.json to ~/.dsh/routines/jobs.json, and the
 model-facing tool from `timer_agent` to `routines`. The route prefix is a

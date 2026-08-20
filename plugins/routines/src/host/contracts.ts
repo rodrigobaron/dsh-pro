@@ -5,7 +5,7 @@
  * real implementations at runtime. Field shapes mirror `@deepseek-ai/dsh-agent`,
  * `@deepseek-ai/dsh-tools`, and the webserver's route surface as of
  * dsh 0.1.0-rc.6.
- * @module @my-dsh/routines/host-contracts
+ * @module @dsh-pro/routines/host-contracts
  */
 
 /** The live session a host agent drives; identity + log read. */

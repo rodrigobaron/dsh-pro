@@ -4,4 +4,4 @@
 # because the package declares `dsh.client`.
 - insert:
     - id: vision-toolkit
-      name: '@my-dsh/vision-toolkit'
+      name: '@dsh-pro/vision-toolkit'

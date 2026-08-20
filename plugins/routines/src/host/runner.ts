@@ -100,7 +100,7 @@ export class RoutineRunner {
     // Manual-run requests (tool / web UI) deserve a snappier response than
     // the schedule tick: a cheap 5s poll that only reads the request field.
     this.requestTimer = setInterval(() => { void this.pollRequests() }, 5_000)
-    this.ctx.effect(() => () => { this.stop() }, '@my-dsh/routines: runner')
+    this.ctx.effect(() => () => { this.stop() }, '@dsh-pro/routines: runner')
     this.ctx.on('session/event', (session, event) => { this.onSessionEvent(session, event) })
   }
 
@@ -249,7 +249,7 @@ export class RoutineRunner {
       try {
         resumeSetup = await this.presetSetupFor(pinnedId)
       } catch (error) {
-        console.warn('[@my-dsh/routines] preset composition for pinned session failed; resuming bare:', error)
+        console.warn('[@dsh-pro/routines] preset composition for pinned session failed; resuming bare:', error)
       }
       try {
         // An explicit per-job model selection overrides the session's own;
@@ -268,7 +268,7 @@ export class RoutineRunner {
         if (raced !== undefined) return raced
         // The pinned session may have been deleted; fall through to a new
         // session rather than failing the job forever.
-        console.warn('[@my-dsh/routines] resume of pinned session failed; creating a new one:', error)
+        console.warn('[@dsh-pro/routines] resume of pinned session failed; creating a new one:', error)
       }
     }
     const agents: HostAgentRegistry = this.ctx.agents
@@ -325,7 +325,7 @@ export class RoutineRunner {
     try {
       this.ctx.get('sessionTitle')?.rename(handle.agent.session, `\u23f0 ${trimmed}`)
     } catch (error) {
-      console.warn('[@my-dsh/routines] could not name the session:', error)
+      console.warn('[@dsh-pro/routines] could not name the session:', error)
     }
   }
 

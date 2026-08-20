@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * @my-dsh/rewind-picker build.
+ * @dsh-pro/rewind-picker build.
  *
  *   lib/index.js  — host half: a stub. Everything is browser-side; the row
  *                   exists so the package qualifies for the client roster.

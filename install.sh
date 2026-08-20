@@ -61,11 +61,15 @@ runtime_deps() {
 # Only from DSH_HOME — the reference checkouts in the repo are left alone.
 # Includes the presets earlier versions of this installer created; the
 # repository no longer owns any preset.
-# @my-dsh/workflow is retired rather than merely deleted from the repo: an
+# The whole @my-dsh scope goes too: the packages were renamed to @dsh-pro, and
+# an old copy left in DSH_HOME would keep loading ALONGSIDE the new one —
+# two of every plugin, both claiming the same slots.
+#
+# @dsh-pro/workflow is retired rather than merely deleted from the repo: an
 # install left behind in DSH_HOME would keep loading, and its browser half
 # suppresses the harness's own workflow node — so a stale copy would leave
 # workflow runs invisible with nothing in the repo to explain why.
-for stale in "$PROFILE_MODULES/@dsh-artifact" "$PROFILE_MODULES/@my-dsh/workflow" "$DSH_HOME/.agent-presets/artifact" "$DSH_HOME/.agent-presets/file-canvas" "$DSH_HOME/.agent-presets/artifacts"; do
+for stale in "$PROFILE_MODULES/@dsh-artifact" "$PROFILE_MODULES/@my-dsh" "$PROFILE_MODULES/@dsh-pro/workflow" "$DSH_HOME/.agent-presets/artifact" "$DSH_HOME/.agent-presets/file-canvas" "$DSH_HOME/.agent-presets/artifacts"; do
   if [ -e "$stale" ]; then
     rm -rf "$stale"
     echo "  ✓ removed superseded $(basename "$stale")"

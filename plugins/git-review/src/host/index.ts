@@ -1,5 +1,5 @@
 /**
- * @my-dsh/git-review — host half.
+ * @dsh-pro/git-review — host half.
  *
  * Serves the `/git/*` JSON API the review tab calls. Two protections apply to
  * every request, because this endpoint can WRITE to a repository:

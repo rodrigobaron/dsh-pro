@@ -13,7 +13,7 @@ import { AT_FILE_INVOCATIONS } from './contract.ts'
 
 /** The atFile namespace's host manifest (strict codecs shared with the client). */
 export const TYPERT_MANIFEST: TypertContribution = {
-  package: '@my-dsh/at-file',
+  package: '@dsh-pro/at-file',
   face: 'host',
   schemas: [],
   model: {

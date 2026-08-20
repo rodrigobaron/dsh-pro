@@ -18,7 +18,7 @@ behaviour is modified; all three adaptations are packaging concerns:
     profile provides none of the three, so an as-is copy fails to load.
 
   - The browser bundle's `__ModuleLoader__` id is rewritten from
-    "@anionex/dsh-vision-toolkit" to "@my-dsh/vision-toolkit", because the web
+    "@anionex/dsh-vision-toolkit" to "@dsh-pro/vision-toolkit", because the web
     boot manifest looks a bundle up by the installed package name.
 
   - Only the payload the code actually reads at runtime is vendored — the skill,

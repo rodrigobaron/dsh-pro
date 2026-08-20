@@ -1,5 +1,5 @@
 /**
- * The /api/@my-dsh/routines route family: the browser half's read/write
+ * The /api/@dsh-pro/routines route family: the browser half's read/write
  * window onto the host-authoritative ledger. Every route carries the same
  * loopback-only trust fence dsh-ssh uses (these endpoints can fire real
  * agent sessions, so LAN-exposed dsh web deployments must not serve them).
@@ -13,7 +13,7 @@
  * - GET    /api/routines/presets       → selectable agent presets {id,name}
  * - GET    /api/routines/model-options → default model + provider/model catalog
  *
- * @module @my-dsh/routines/routes
+ * @module @dsh-pro/routines/routes
  */
 import { randomUUID } from 'node:crypto'
 import type {
