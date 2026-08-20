@@ -48,6 +48,15 @@ let activeSessionId = null;
 let layoutService = null;
 
 /** Open the details column, reporting rather than swallowing a wiring failure. */
+// Copy labels for the primitives.
+//
+// CodeBlock and the fenced blocks inside MarkdownText default their copy
+// labels to Simplified Chinese — they are PARAMETER DEFAULTS
+// (`copyLabel = "\u590d\u5236"`), not localized strings, so they ignore the
+// interface language entirely and every caller that omits them ships Chinese
+// into an English UI. Passing them is the only fix available from here.
+const CODE_LABELS = { copyLabel: "Copy", copiedLabel: "Copied" };
+
 // The reference artifact canvas's icon-button geometry: a 28px square with no
 // chrome until hover, so a row of them reads as one control strip rather than
 // as competing buttons.
@@ -334,7 +343,7 @@ function MarkdownRenderer({ envelope }) {
   return h(
     "div",
     { style: { padding: "16px", overflow: "auto", height: "100%" } },
-    h(MarkdownText, { text: envelope.content ?? "" }),
+    h(MarkdownText, { text: envelope.content ?? "", codeLabels: CODE_LABELS }),
   );
 }
 
@@ -345,8 +354,7 @@ function CodeRenderer({ envelope }) {
     h(CodeBlock, {
       code: envelope.content ?? "",
       lang: envelope.language ?? "text",
-      copyLabel: "Copy",
-      copiedLabel: "Copied",
+      ...CODE_LABELS,
     }),
   );
 }

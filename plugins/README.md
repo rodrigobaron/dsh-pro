@@ -814,6 +814,31 @@ seam id to an engine name would leave `ctx.web` with no provider at all.
 
 ## Language
 
+### The primitives default to Chinese
+
+`CodeBlock`, the fenced blocks inside `MarkdownText`, and `HoverCard` default
+their copy labels to Simplified Chinese:
+
+```js
+function CodeBlock({ code, lang, className, copyLabel = "复制", copiedLabel = "复制成功" })
+```
+
+These are **parameter defaults, not localized strings** — they ignore the
+interface language entirely, so any caller that omits them ships Chinese into
+an English UI. That is how a Markdown artifact came to render its code fences
+with a `复制` button.
+
+Passing the labels is the only fix available from a plugin. `MarkdownText`
+takes `codeLabels: { copyLabel, copiedLabel }`, which reaches the fences it
+renders internally. This repository keeps one `CODE_LABELS` constant so a whole
+file rendered as code and a fence inside a Markdown file cannot drift apart.
+
+The harness also defaults a reconnect banner to
+`连接已断开，正在重连…`. Nothing here renders it, and no plugin can override
+a component it does not call — if it appears while disconnected, that is
+upstream's string.
+
+
 This repository writes English only, and English is the default. It does not
 **force** English. The harness keeps its own language selector, and a user who
 has configured Chinese keeps Chinese — that setting is theirs to make.
