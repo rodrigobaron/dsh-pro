@@ -1,0 +1,6 @@
+# Browser automation over Playwright. The host half publishes a Skill and
+# mounts its ten browser_* tools only in agents that load that skill, so the
+# tool surface costs nothing under presets that never browse.
+- insert:
+    - id: browser
+      name: '@my-dsh/browser'

@@ -19,10 +19,10 @@ preset is default.
 | `client-ui-file-canvas` | the artifact panel and its renderers |
 | `client-ui-layout-wide` | a wide, resizable details column |
 | `context` | a context dashboard tab and the `/context` command |
-| `english-only` | pins the interface to English and removes the language selector |
 | `git-review` | a Git tab: review the diff, stage, discard, commit, and push |
 | `archived-sessions` | a session manager in Settings: browse, archive, and delete conversations |
 | `vision-toolkit` | vision skills for the agent: image Q&A, OCR, grounding, pixel diff |
+| `browser` | browser skills for the agent: open pages, read, click, fill, screenshot |
 
 ## Adding a plugin
 
@@ -35,15 +35,25 @@ shape is just "a directory with a build script" as far as the installer is
 concerned.
 
 Repackaging exists because upstream plugins are installed by `dsh plugin add`,
-which npm-installs their runtime dependencies into the profile. This installer
-only copies files, so a plugin's unresolvable dependencies are inlined at build
-time instead — otherwise it dies at load with `ERR_MODULE_NOT_FOUND`.
+which npm-installs their runtime dependencies into the profile. The harness
+profile resolves only what it ships itself, so a plugin's own dependencies have
+to arrive some other way or it dies at load with `ERR_MODULE_NOT_FOUND`. There
+are two answers, and the first is almost always right:
+
+- **Bundle it.** The build script inlines the dependency, and nothing extra is
+  installed. `context`, `archived-sessions`, and `browser` all inline
+  schemastery this way.
+- **Carry it.** Anything listed in `dependencies` is copied, with its transitive
+  closure, into `<plugin>/node_modules` in the profile. Reserve this for
+  packages that genuinely cannot be bundled: `playwright-core` finds its driver
+  and its browser builds relative to its own install path, so it has to exist as
+  a real directory on disk.
 
 A plugin directory holds a `package.json` and may contribute:
 
 | File | Purpose |
 | --- | --- |
-| `package.json` | required. `name` decides the install path; a `scripts.build` entry is run first |
+| `package.json` | required. `name` decides the install path; a `scripts.build` entry is run first; `dependencies` are carried into the profile |
 | `cordis.patch.yml` | loader rows merged into the profile patch |
 
 **This repository creates no agent preset.** An agent-preset row is the
@@ -55,7 +65,7 @@ Instead, a plugin registers its tool into `agent.ctx.tools` when its skill
 loads, reading the agent off `exec.agent` in a `tools/result` handler. The tool
 then works under whatever presets the deployment already has — `standard`,
 `code`, `minimal`, or the user's own — and costs nothing in agents that never
-ask for it. `tool-file-canvas` and `vision-toolkit` both work this way.
+ask for it. `tool-file-canvas`, `vision-toolkit`, and `browser` all work this way.
 
 Two traps worth knowing if you copy the pattern:
 
@@ -157,17 +167,65 @@ a "discard everything" flag.
 
 Staging is per file. Hunk-level staging is not implemented.
 
+## Browsing
+
+`browser` drives a real Chromium tab through Playwright: open a page, read it as
+an accessibility snapshot, click, fill, wait, manage tabs, screenshot. It is for
+pages that must be *rendered* to be understood — client-side apps, a local dev
+server, a visual check. The harness's own `web_search` still handles finding
+things, and `web_fetch` stays disabled upstream.
+
+Ten tools is a lot of permanent schema, so they are gated: they mount into an
+agent only when it loads the `browser` skill, the same way `show_file` and the
+vision tools do.
+
+### Seeing the page
+
+`browser_screenshot` writes a PNG and returns its path — it shows nobody
+anything. The path is what makes it useful: the file lands under the **session
+workspace** rather than the harness process cwd, which is what puts it inside
+the artifact canvas's roots, so `show_file` can render it. Browse, screenshot,
+show is the loop.
+
+### Finding a browser
+
+`playwright-core` downloads nothing at install time. On first use the plugin
+tries its Playwright-managed Chromium, then an installed Chrome, then Edge, and
+if all three are absent it says so and names the one command that fixes it
+(`npx playwright install chromium`) rather than downloading software unasked.
+
+The dependency is pinned to `~1.59.1` because that line expects the Chromium
+build already present in most Playwright caches. Bumping it is safe — the worst
+case is falling back to system Chrome.
+
+### Limits
+
+- **Loopback and private addresses stay reachable**, deliberately: testing a
+  local dev server is the main reason to hand an agent a browser. The exception
+  is cloud instance-metadata (`169.254.0.0/16`, `metadata.google.internal`),
+  which nothing legitimate browses and which hands out credentials to anything
+  that asks. That check reads the address as written — a DNS name resolving
+  there still gets through, since catching that needs resolution-time
+  interception this plugin does not do.
+- **`userDataDir` may not be a real browser profile.** Upstream documents this;
+  here it throws, because pointing automation at your Chrome profile silently
+  hands it every session you are signed in to.
+- **No page JavaScript evaluation.** There is no `browser_eval`, on purpose.
+- **Page content is data.** The skill body says so to the model, which is a
+  mitigation and not a guarantee. Anything consequential — submitting a form,
+  entering personal data, downloading, granting a permission — is written as
+  ask-the-user-first.
+
 ## Language
 
-English is the only interface language. `english-only` pins the locale and
-shadows the language selector, taking the `language` seat in the
-`settings.general.item` slot at a lower priority — the framework's documented
-way to replace a row it already owns.
+Everything this repository writes is English, and English is the default. The
+harness keeps its own language selector: pinning the locale here froze the UI,
+so that plugin is gone.
 
-Pinning is what actually guarantees English: the repackaged plugins arrived
-with Chinese dictionaries, and a locale of `zh` would select them. Their
-Chinese has since been removed or translated, so both the pin and the source
-agree.
+What guarantees English is the source, not a pin. The repackaged plugins
+arrived with Chinese dictionaries, which a locale of `zh` would have selected;
+that Chinese has since been removed or translated, so switching languages no
+longer resurrects it.
 
 Four files still contain Chinese, deliberately:
 
@@ -183,7 +241,7 @@ bytes* stays, because changing it would silently break the match.
 
 ## Licensing
 
-Two plugins here are derived from other people's work. Each keeps its upstream
+Four plugins here are derived from other people's work. Each keeps its upstream
 LICENSE, and a NOTICE recording exactly what was changed:
 
 | Plugin | Upstream | License |
@@ -191,5 +249,6 @@ LICENSE, and a NOTICE recording exactly what was changed:
 | `context` | [bowenliang123/dsh-context](https://github.com/bowenliang123/dsh-context) | Apache-2.0 |
 | `archived-sessions` | [Zephyr-vibe/dsh-archived-sessions](https://github.com/Zephyr-vibe/dsh-archived-sessions) | MIT |
 | `vision-toolkit` | [Anionex/dsh-vision-toolkit](https://github.com/Anionex/dsh-vision-toolkit) | MIT |
+| `browser` | [Clizo1209/dsh-playwright-browser](https://github.com/Clizo1209/dsh-playwright-browser) | MIT |
 
 Everything else in this directory is MIT and original to this repository.

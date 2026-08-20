@@ -1,0 +1,32 @@
+This package is a standalone rewrite of dsh-playwright-browser by Clizo1209,
+used under the MIT License. The original project lives at:
+
+    https://github.com/Clizo1209/dsh-playwright-browser
+
+Upstream ships TypeScript sources, so this is a port rather than a repackage:
+the target parser and the browser controller follow its design closely, while
+the plugin surface is rebuilt for this repository's conventions. The
+differences are deliberate:
+
+  - Skill gating. Upstream registers ten browser_* tools globally, so every
+    agent under every preset carries them. Here they mount into an agent only
+    once it loads the `browser` skill, matching tool-file-canvas and the vision
+    toolkit. This repository owns no agent preset, and a skill gate is how a
+    profile-level plugin grants tools without one.
+
+  - playwright-core instead of playwright. The `playwright` package downloads
+    Chromium, Firefox, and WebKit in a postinstall step; playwright-core
+    downloads nothing. The launch fallback (Playwright Chromium, then system
+    Chrome, then Edge) already covers finding a browser.
+
+  - Screenshots resolve against the session workspace rather than the harness
+    process cwd, and are declared as artifacts. That puts them inside the
+    artifact canvas's roots, so `show_file` can render one for the user.
+
+  - Two added guards: navigation to cloud instance-metadata addresses is
+    refused, and `userDataDir` may not point at a real browser profile.
+
+  - The hand-rolled parameter/type machinery is dropped in favour of
+    `defineTool` from @deepseek-ai/dsh-tools, which infers the same types.
+
+The MIT License text, including its copyright notice, is in LICENSE.
