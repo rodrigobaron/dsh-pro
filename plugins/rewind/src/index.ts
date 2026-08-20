@@ -24,12 +24,12 @@
  */
 import { deriveEventMessage, isAppendSurfaceEvent } from '@deepseek-ai/dsh-session'
 import { hasApiRemoteSubagentOwner } from '@deepseek-ai/dsh-api-remotes'
-import { commitRewind, type RewindSession } from './surface.ts'
+import { commitRewind, rewoundMessageIds, type RewindSession } from './surface.ts'
 
 // Re-exported so the rewind planning is testable without a live session: it is
 // pure, and it is the part where an off-by-one silently shadows the wrong
 // range.
-export { commitRewind, markerText, planRewind } from './surface.ts'
+export { commitRewind, markerText, planRewind, rewoundMessageIds } from './surface.ts'
 export type { RewindPlan, RewindRefusal, RewindSession } from './surface.ts'
 
 /** Cordis plugin name. */
@@ -91,6 +91,19 @@ function resolveBoundary(
   return null
 }
 
+/**
+ * The rewound user-message ids for one session.
+ *
+ * @param session - the live session.
+ * @returns durable message ids the browser half hides, oldest first.
+ */
+function shadowedIds(session: { readonly events: readonly { seq: number; type: string }[] }): string[] {
+  return rewoundMessageIds(session.events as never, (event) => {
+    const message = deriveEventMessage(event as never)
+    return message === null ? null : ((message as { id?: string }).id ?? null)
+  })
+}
+
 /** Mount the /rewind route. */
 export function apply(ctx: {
   webServer: { register(route: unknown): void }
@@ -107,7 +120,7 @@ export function apply(ctx: {
         res.end()
         return
       }
-      let payload: { sessionId?: unknown; boundary?: unknown; messageId?: unknown }
+      let payload: { sessionId?: unknown; boundary?: unknown; messageId?: unknown; query?: unknown }
       try {
         payload = JSON.parse((await readBody(req)) || '{}') as typeof payload
       } catch {
@@ -134,6 +147,12 @@ export function apply(ctx: {
         sendJson(res, 409, errorBody('agent-busy', `session "${sessionId}" is running; stop the current turn before rewinding`, { sessionId }))
         return
       }
+      // A query, not a rewind: the browser half asks for the current state on
+      // mount so a page reload does not resurrect hidden messages.
+      if (payload.query === true) {
+        sendJson(res, 200, { ok: true, value: { rewound: shadowedIds(agent.session as never) } })
+        return
+      }
       const boundary = resolveBoundary(agent.session as never, payload)
       if (boundary === null) {
         sendJson(res, 404, errorBody('message-not-found', `session "${sessionId}" has no message matching the request`, { sessionId }))
@@ -142,7 +161,7 @@ export function apply(ctx: {
       try {
         const result = commitRewind(agent.session as unknown as RewindSession, boundary)
         await sessions.flush(agent.session)
-        sendJson(res, 200, { ok: true, value: { boundary, seq: result.seq, shadowed: result.shadowed } })
+        sendJson(res, 200, { ok: true, value: { boundary, seq: result.seq, shadowed: result.shadowed, rewound: shadowedIds(agent.session as never) } })
       } catch (error) {
         sendJson(res, 422, errorBody('rewind-rejected', error instanceof Error ? error.message : String(error), { sessionId, boundary }))
       }

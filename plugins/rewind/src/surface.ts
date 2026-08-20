@@ -25,6 +25,43 @@ declare module '@deepseek-ai/dsh-llm' {
   }
 }
 
+/**
+ * The user messages a set of rewinds has shadowed, as durable message ids.
+ *
+ * The transcript is projected from append-origin events, so it keeps showing
+ * every rewound message — the harness documents this deliberately, since
+ * "landed replacements shadow history the reader already saw". The browser
+ * half hides them, and these ids are what it anchors on: they are the same ids
+ * the chat flow keys its rows by.
+ *
+ * Only rewind's own markers are read, never compaction's. Compaction shadows
+ * surface nodes too, and its summaries are meant to stay visible.
+ *
+ * @param events - the complete session log.
+ * @param deriveId - resolves one event to its durable message id.
+ * @returns the shadowed user-message ids, oldest first.
+ */
+export function rewoundMessageIds(
+  events: readonly { seq: number; type: string; data?: unknown; sourceEventSeqs?: readonly number[] }[],
+  deriveId: (event: { seq: number; type: string; data?: unknown }) => string | null,
+): string[] {
+  const shadowed = new Set<number>()
+  for (const event of events) {
+    if (event.type !== 'user/message') continue
+    const source = (event.data as { source?: { kind?: string } } | undefined)?.source
+    if (source?.kind !== 'rewind') continue
+    for (const seq of event.sourceEventSeqs ?? []) shadowed.add(seq)
+  }
+  if (shadowed.size === 0) return []
+  const ids: string[] = []
+  for (const event of events) {
+    if (!shadowed.has(event.seq) || event.type !== 'user/message') continue
+    const id = deriveId(event)
+    if (id !== null) ids.push(id)
+  }
+  return ids
+}
+
 /** Enough of a live session for the rewind append. */
 export interface RewindSession {
   readonly surface: { readonly nodes: readonly number[] }

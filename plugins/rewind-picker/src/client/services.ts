@@ -76,5 +76,5 @@ export interface ClientCtx {
 
 /** The host envelope POST /rewind settles to. */
 export type RewindResponse =
-  | { ok: true; value?: { boundary?: number; seq?: number } }
+  | { ok: true; value?: { boundary?: number; seq?: number; rewound?: readonly string[] } }
   | { ok: false; error?: { code?: string; message?: string } }

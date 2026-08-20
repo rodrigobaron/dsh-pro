@@ -11,6 +11,8 @@
  * nothing is dispatched, no session log record is written, and the invocation
  * never becomes model-visible.
  */
+import { applyHiding } from './hide.ts'
+import { requestRewindState } from './api.ts'
 import { makePicker } from './Picker.tsx'
 import { en, NS } from './locales.ts'
 import { pickerStoreOf } from './store.ts'
@@ -61,7 +63,62 @@ function apply(ctx: ClientCtx): void {
     })
   }, 'rewind-picker: /rewind command')
 
-  const Picker = makePicker(ctx, t, pickerStoreOf)
+  // ── hiding rewound messages in the transcript ──────────────────────────────
+  // The rewind is real for the model, but the transcript projects append-origin
+  // events and keeps rendering the rewound exchange. There is no supported
+  // filter for that, so hide.ts walks the chat flow. See its module comment for
+  // why this is a DOM pass rather than a stylesheet.
+  const rewoundBySession = new Map<string, ReadonlySet<string>>()
+  let hidingSession: string | undefined
+
+  /** Re-apply hiding for the session on screen. */
+  function refreshHiding(sessionId: string): void {
+    applyHiding(rewoundBySession.get(sessionId) ?? new Set())
+  }
+
+  /** Ask the host what is rewound, then hide it. */
+  async function loadHiding(sessionId: string): Promise<void> {
+    const ids = await requestRewindState(sessionId)
+    rewoundBySession.set(sessionId, new Set(ids))
+    refreshHiding(sessionId)
+  }
+
+  /** Called by the picker once a rewind commits, with the fresh id set. */
+  function noteRewound(sessionId: string, ids: readonly string[]): void {
+    rewoundBySession.set(sessionId, new Set(ids))
+    refreshHiding(sessionId)
+  }
+
+  /**
+   * Keep hiding applied as the flow re-renders.
+   *
+   * The chat flow rebuilds rows on every snapshot change, which drops the
+   * inline styles, so this re-runs after each mutation. Cheap: the walk is one
+   * pass over the rows and does nothing when the session has no rewinds.
+   */
+  ctx.effect(() => {
+    if (typeof MutationObserver === 'undefined' || typeof document === 'undefined') return () => {}
+    let queued = false
+    const observer = new MutationObserver(() => {
+      if (queued || hidingSession === undefined) return
+      queued = true
+      queueMicrotask(() => {
+        queued = false
+        if (hidingSession !== undefined) refreshHiding(hidingSession)
+      })
+    })
+    observer.observe(document.body, { childList: true, subtree: true })
+    return () => { observer.disconnect() }
+  }, 'rewind-picker: keep rewound messages hidden')
+
+  const Picker = makePicker(ctx, t, pickerStoreOf, {
+    onSession: (sessionId) => {
+      hidingSession = sessionId
+      if (!rewoundBySession.has(sessionId)) void loadHiding(sessionId)
+      else refreshHiding(sessionId)
+    },
+    onRewound: noteRewound,
+  })
   ctx.slots.inject('conversation.input.overlay', () => ctx.slots.register(
     {
       name: 'conversation.input.overlay',

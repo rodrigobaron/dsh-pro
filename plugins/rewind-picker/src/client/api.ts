@@ -38,6 +38,14 @@ export function rewindPoints(nodes: readonly ConversationNode[] | undefined): { 
 }
 
 /**
+ * The durable ids of user messages already rewound in this session.
+ *
+ * Asked on mount so a page reload does not resurrect hidden messages.
+ *
+ * @param sessionId - the session to query.
+ * @returns the rewound message ids, or an empty list when the query fails.
+ */
+/**
  * POST one rewind request.
  *
  * Settles to the host envelope rather than throwing, so a transport failure
@@ -47,12 +55,18 @@ export function rewindPoints(nodes: readonly ConversationNode[] | undefined): { 
  * @param boundary - the seq of the user message to rewind to.
  * @returns the host envelope, or a synthesized transport error.
  */
-export async function requestRewind(sessionId: string, boundary: number): Promise<RewindResponse> {
+export async function requestRewindState(sessionId: string): Promise<readonly string[]> {
+  const body = await postRewind({ sessionId, query: true })
+  return body.ok === true ? (body.value as { rewound?: readonly string[] } | undefined)?.rewound ?? [] : []
+}
+
+/** POST one request to the rewind route, settling to its envelope. */
+async function postRewind(payload: Record<string, unknown>): Promise<RewindResponse> {
   try {
     const response = await fetch('/rewind', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ sessionId, boundary }),
+      body: JSON.stringify(payload),
     })
     const body: unknown = await response.json().catch(() => null)
     if (body === null || typeof body !== 'object') {
@@ -62,6 +76,10 @@ export async function requestRewind(sessionId: string, boundary: number): Promis
   } catch (error) {
     return { ok: false, error: { code: 'transport', message: error instanceof Error ? error.message : String(error) } }
   }
+}
+
+export async function requestRewind(sessionId: string, boundary: number): Promise<RewindResponse> {
+  return postRewind({ sessionId, boundary })
 }
 
 /**

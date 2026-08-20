@@ -534,23 +534,36 @@ Two consequences follow from the mechanism, and both are deliberate:
   range irreversibly, so it is pure and unit-tested
   (`npm run test --workspace=@my-dsh/rewind`).
 
-### What it does not do: the transcript
+### Hiding the rewound messages
 
-The rewind is real for the model and **not** reflected in what you see. The
-harness's own docs are explicit that "a human transcript must project
+The rewind is real for the model, but the transcript is a different projection.
+The harness's docs are explicit that "a human transcript must project
 append-origin events rather than `session.surface`, because landed replacements
-shadow history the reader already saw" — so the conversation you are reading
-keeps every rewound message, exactly as compaction leaves everything visible
-after summarizing it.
+shadow history the reader already saw" — so the rewound exchange keeps
+rendering, exactly as compaction leaves everything visible after summarizing.
 
-Hiding them client-side is not currently possible from a plugin: chat nodes are
-rendered by the framework's keyed renderers, and a slot entry can only *replace*
-one, never filter it and fall through for the rest. Upstream's approach relied
-on `dsh-client-runtime` filtering recalled events, which is the same core
-support that does not exist.
+There is no supported filter for this: the client runtime has no hook that
+drops a chat node, and a slot entry can only *replace* a keyed renderer, never
+filter one and fall through for the rest. So `rewind-picker` hides the rows in
+the DOM, driven by the ids the host reports.
 
-So after a rewind: the model has genuinely forgotten, the composer has the
-message back to edit, and the transcript still shows the old exchange.
+That means coupling to two framework attributes, `data-chat-flow-kind` and
+`data-chat-flow-key`. **If either changes, hiding silently stops and the
+rewound messages reappear** — which is the safe direction to fail in: the
+model's history is still correct, the reader just sees more than intended.
+
+It walks the flow rather than writing a stylesheet, because only *user* rows
+carry a durable message id in their key. Assistant steps and tool calls are
+keyed by turn and call id, so they cannot be selected directly; walking in
+order with a "currently inside a rewound turn" flag identifies them by position
+and stops at the next surviving user message. That last part is what keeps
+messages sent *after* a rewind visible.
+
+A `MutationObserver` re-applies it, because the flow rebuilds its rows on every
+snapshot change and drops the inline styles. On mount the client asks the host
+(`POST /rewind {query:true}`) which messages are rewound, so a reload does not
+resurrect them. Only rewind's own markers count — compaction shadows surface
+nodes too, and its summaries are meant to stay visible.
 
 ### Dialog layout
 

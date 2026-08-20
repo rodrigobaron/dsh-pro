@@ -42,16 +42,32 @@ function errorKey(code: string | undefined): string {
  * @param storeOf - resolves a session's open store.
  * @returns the overlay component.
  */
+/** Hooks the plugin body uses to keep transcript hiding in step. */
+export interface PickerHooks {
+  /** The session this overlay instance is bound to, on every render. */
+  onSession(sessionId: string): void
+  /** A rewind committed; these are the session's rewound message ids now. */
+  onRewound(sessionId: string, ids: readonly string[]): void
+}
+
 export function makePicker(
   ctx: ClientCtx,
   t: Translate,
   storeOf: (sessionId: string) => { set(open: boolean): void },
+  hooks: PickerHooks,
 ): (props: PickerProps) => ReactNS.ReactElement | null {
   return function RewindPicker(props: PickerProps): ReactNS.ReactElement | null {
     const sessionId = typeof props.sessionId === 'string' ? props.sessionId : ''
     const open = typeof props.useRewindPicker === 'function' ? props.useRewindPicker(o => o) : false
     const nodes = typeof props.useSession === 'function' ? props.useSession(s => s.nodes) : undefined
     const running = typeof props.useSession === 'function' ? props.useSession(s => s.running === true) : false
+
+    // The overlay renders for the session on screen even while closed, which
+    // makes it the natural place to tell the plugin body which session's
+    // transcript needs hiding applied.
+    React.useEffect(() => {
+      if (sessionId !== '') hooks.onSession(sessionId)
+    }, [sessionId])
 
     const [selected, setSelected] = React.useState<number | null>(null)
     const [busy, setBusy] = React.useState(false)
@@ -95,6 +111,10 @@ export function makePicker(
       }
       // The other half of a rewind: the message comes back for editing.
       restoreDraft(ctx, sessionId, point.text)
+      // The host answers with the session's full rewound set, so the transcript
+      // hides the exchange that just left the model's history.
+      const rewound = result.value?.rewound
+      if (rewound !== undefined) hooks.onRewound(sessionId, rewound)
       close()
     }
 
