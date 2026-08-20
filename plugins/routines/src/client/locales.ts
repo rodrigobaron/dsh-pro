@@ -57,7 +57,7 @@ export const en = {
  * English labels for the harness's built-in presets.
  *
  * The roster reports each preset's own `name`, and for the four built-ins that
- * name is Simplified Chinese (标准模式, PTC 模式, …) regardless of the
+ * name is Simplified Chinese regardless of the
  * interface language. The harness's own preset picker does not show those
  * either — it carries these labels. Matching them keeps this select saying
  * what the rest of the GUI says; anything not listed is a custom preset whose

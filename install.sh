@@ -19,12 +19,12 @@
 set -euo pipefail
 
 DSH_HOME="${DSH_HOME:-$HOME/.dsh}"
-PLUGINS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_DIR="$(dirname "$PLUGINS_DIR")"
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PLUGINS_DIR="$REPO_DIR/plugins"
 PROFILE_MODULES="$DSH_HOME/profiles/node_modules"
 PATCH_FILE="$DSH_HOME/profiles/web/cordis.patch.yml"
 
-echo "my-dsh plugin installer"
+echo "dsh-pro plugin installer"
 echo "  DSH_HOME: $DSH_HOME"
 echo
 

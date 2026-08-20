@@ -1,4 +1,16 @@
-# my-dsh plugins
+# dsh-pro
+
+A personal [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)
+environment: standalone plugins, installed into a local `dsh` profile.
+
+```bash
+./install.sh
+```
+
+Each plugin is self-contained — nothing here depends on `reference/`, which
+holds upstream checkouts consulted while porting and is not distributed.
+
+## Plugins
 
 DeepSeek Harness plugins developed in this workspace. One installer builds and
 installs all of them.
@@ -679,7 +691,8 @@ rather than offered.
 
 Two things the raw data needed before it was usable:
 
-- **Preset names arrive in Chinese.** The roster reports `标准模式`, `PTC 模式`
+- **Preset names arrive in Chinese.** The roster reports Simplified Chinese
+  names for the four built-ins
   and so on regardless of interface language; the harness's own picker does not
   show those either, it carries its own labels. This select matches them, so it
   says what the rest of the GUI says. Anything not built-in keeps the name its
@@ -820,13 +833,13 @@ seam id to an engine name would leave `ctx.web` with no provider at all.
 their copy labels to Simplified Chinese:
 
 ```js
-function CodeBlock({ code, lang, className, copyLabel = "复制", copiedLabel = "复制成功" })
+function CodeBlock({ code, lang, className, copyLabel = <Chinese>, copiedLabel = <Chinese> })
 ```
 
 These are **parameter defaults, not localized strings** — they ignore the
 interface language entirely, so any caller that omits them ships Chinese into
 an English UI. That is how a Markdown artifact came to render its code fences
-with a `复制` button.
+with a Simplified Chinese copy button.
 
 Passing the labels is the only fix available from a plugin. `MarkdownText`
 takes `codeLabels: { copyLabel, copiedLabel }`, which reaches the fences it
@@ -834,7 +847,7 @@ renders internally. This repository keeps one `CODE_LABELS` constant so a whole
 file rendered as code and a fence inside a Markdown file cannot drift apart.
 
 The harness also defaults a reconnect banner to
-`连接已断开，正在重连…`. Nothing here renders it, and no plugin can override
+a Simplified Chinese string. Nothing here renders it, and no plugin can override
 a component it does not call — if it appears while disconnected, that is
 upstream's string.
 
@@ -869,7 +882,7 @@ Chinese survives in four places, all of them deliberate:
 | File | Why |
 | --- | --- |
 | `vision-toolkit/upstream/vendor/agent-vision-toolkit/**` | hash-verified. `UPSTREAM_MANIFEST.json` records each file's sha256 and an aggregate the plugin checks at load; editing one stops the tools mounting |
-| `vision-toolkit/upstream/lib/upstream.js` | a regex matching `bbox (原图像素)` in the Python worker's OUTPUT. The worker is hash-locked, so translating the matcher would stop it parsing |
+| `vision-toolkit/upstream/lib/upstream.js` | a regex matching a Simplified Chinese label in the Python worker's OUTPUT. The worker is hash-locked, so translating the matcher would stop it parsing |
 | `vision-toolkit/upstream/patches/*.patch` | a patch's context lines must match the file it applies to |
 | `vision-toolkit/upstream/assets/skill/references/restore-ui.md` | tracked with a sha256 in `assets/skill/UPSTREAM.json` |
 

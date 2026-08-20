@@ -1,14 +1,14 @@
 {
-  "name": "my-dsh",
+  "name": "dsh-pro",
   "private": true,
-  "description": "DeepSeek Harness plugins developed in this workspace.",
+  "description": "A personal DeepSeek Harness environment: standalone plugins for artifacts, git review, routines, rewind, search, deep research, and more.",
   "workspaces": [
     "plugins/*"
   ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "install-plugins": "bash plugins/install.sh"
+    "install-plugins": "bash install.sh"
   },
   "devDependencies": {
     "saxes": "^6.0.0",
