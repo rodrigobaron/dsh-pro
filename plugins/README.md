@@ -17,6 +17,7 @@ Then restart the harness.
 | `client-ui-file-canvas` | the artifact panel and its renderers |
 | `client-ui-layout-wide` | a wide, resizable details column |
 | `context` | a context dashboard tab and the `/context` command |
+| `english-only` | pins the interface to English and removes the language selector |
 | `git-review` | a Git tab: review the diff, stage, discard, commit, and push |
 | `archived-sessions` | a session manager in Settings: browse, archive, and delete conversations |
 | `vision-toolkit` | vision skills for the agent: image Q&A, OCR, grounding, pixel diff |
@@ -124,6 +125,30 @@ not recoverable afterwards — and the server accepts only explicit paths, never
 a "discard everything" flag.
 
 Staging is per file. Hunk-level staging is not implemented.
+
+## Language
+
+English is the only interface language. `english-only` pins the locale and
+shadows the language selector, taking the `language` seat in the
+`settings.general.item` slot at a lower priority — the framework's documented
+way to replace a row it already owns.
+
+Pinning is what actually guarantees English: the repackaged plugins arrived
+with Chinese dictionaries, and a locale of `zh` would select them. Their
+Chinese has since been removed or translated, so both the pin and the source
+agree.
+
+Four files still contain Chinese, deliberately:
+
+| File | Why |
+| --- | --- |
+| `vision-toolkit/.../vendor/agent-vision-toolkit/**` | hash-verified. `UPSTREAM_MANIFEST.json` records each file's sha256 and an aggregate the plugin checks at load; editing one stops the tools mounting |
+| `vision-toolkit/upstream/lib/upstream.js` | a regex matching `bbox (原图像素)` in the Python worker's OUTPUT. The worker is hash-locked, so translating the matcher would stop it parsing |
+| `vision-toolkit/upstream/patches/*.patch` | a patch's context lines must match the file it applies to |
+| `vision-toolkit/.../assets/skill/references/restore-ui.md` | tracked with a sha256 in `assets/skill/UPSTREAM.json` |
+
+The rule is: Chinese we *emit* is gone; Chinese that *matches someone else's
+bytes* stays, because changing it would silently break the match.
 
 ## Licensing
 
