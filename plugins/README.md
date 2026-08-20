@@ -27,6 +27,7 @@ preset is default.
 | `search` | free web search: ten engines with automatic fallback, no API key |
 | `notification` | desktop notifications when a session finishes a turn |
 | `rewind` | a rewind button on every user message: drop it and everything after |
+| `rewind-picker` | the `/rewind` command: pick the message to rewind to from a list |
 
 ## Adding a plugin
 
@@ -492,6 +493,43 @@ The plugin also now claims its own `<style>` tag with `data-plugin`. Upstream
 leaves it unset and the harness then attributes the stylesheet to whichever
 plugin happened to be loading — it showed up in the DOM as `@my-dsh/git-review`
 owning the notification rules.
+
+## Rewinding the conversation
+
+Two entry points, one route:
+
+- **`rewind`** puts a button on every user message. Click it, confirm, and that
+  message and everything after it leave the conversation — from the transcript
+  and from what the model sees — while its text returns to the composer for
+  editing.
+- **`rewind-picker`** adds `/rewind`, which opens a dialog listing the user
+  messages newest first so you can pick one without hunting for its button.
+
+Both POST `/rewind`, which appends a durable `session/recall` tombstone. The
+log keeps every event, so this survives a restart.
+
+**Files are not reverted.** Nothing on disk is touched, so code the agent wrote
+during a rewound turn stays exactly as it is. That is the one real difference
+from the rewind in Claude Code, which also restores the working tree, and the
+dialog says so rather than hiding it in a tooltip.
+
+### Why two packages
+
+`rewind` is upstream's prebuilt bundle. Its button lives inside the user
+message, which means shadowing the framework's keyed user-bubble renderer and
+reproducing the bubble — content blocks, image gallery, lightbox and all.
+Upstream does that faithfully and redoing it would be risk without benefit, but
+a prebuilt blob also cannot be extended. So the command and its dialog are
+ours, in a companion package, driving the same route. Same split as
+`tool-file-canvas` / `client-ui-file-canvas`.
+
+### The node shape trap
+
+The conversation snapshot's nodes are **flat** — `{ kind, seq, content, time }`.
+The `conversation.chat.node` slot hands its renderer a `{ node: { data } }`
+wrapper instead, and assuming that wrapper applies to the snapshot too produces
+a picker that finds 97 nodes and zero messages, with no error anywhere. If you
+read nodes from a snapshot, read the fields off the node.
 
 ## Language
 

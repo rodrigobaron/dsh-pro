@@ -1,0 +1,12 @@
+# The `/rewind` command and its picker.
+#
+# A companion to @my-dsh/rewind rather than part of it: that package's client
+# half is upstream's prebuilt bundle, which cannot be extended without
+# rewriting the user-bubble renderer it shadows. This one is ours, and drives
+# the same POST /rewind route.
+#
+# Host half is a stub — everything happens in the browser — but the row is what
+# qualifies the package for the client roster.
+- insert:
+    - id: rewind-picker
+      name: '@my-dsh/rewind-picker'
