@@ -39,16 +39,15 @@ conventions:
     `dsh plugin add`, which this repository does not use, and the second is a
     translation this repository does not carry.
 
-  - There is no typecheck script, and this is the one real loss. The client
-    half imports harness client packages for the module augmentations that
-    declare the composer slot names it fills; upstream resolves them with
-    `link:` devDependencies into a sibling deepseek-harness monorepo checkout,
-    which this repository does not have. Installing them from npm instead
-    fails: the published rc.7 packages peer `^0.1.0-rc.7`, npm resolves that
-    to rc.8, and rc.8 peers `^0.1.0-rc.8`. Pinning rc.8 would resolve but
-    would type-check against a version that is not the one running, which is
-    worse than no check. The build is the guard instead — esbuild fails on
-    unresolved non-external imports, and scripts/build.mjs asserts that both
-    halves contain what the loader needs.
+  - Type-checking resolves the harness differently. The client half imports
+    harness client packages for the module augmentations that declare the
+    composer slot names it fills; upstream resolves them with `link:`
+    devDependencies into a sibling deepseek-harness monorepo checkout, which
+    this repository does not have. Installing them from npm does not work
+    either: the published rc.7 packages peer `^0.1.0-rc.7`, npm resolves that
+    to rc.8, and rc.8 peers `^0.1.0-rc.8`, so the graph has no solution.
+    Instead scripts/link-harness.mjs symlinks the INSTALLED harness into
+    node_modules before tsc runs, so the types can never drift from the
+    deployment — they are the deployment.
 
 The MIT License text, including its copyright notice, is in LICENSE.

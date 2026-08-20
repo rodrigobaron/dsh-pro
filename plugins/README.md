@@ -94,6 +94,13 @@ that; nothing else is required of them.
 
 Build output is gitignored and reproduced by the installer.
 
+Plugins built from `src/` also declare a `typecheck`. One command runs every
+one that has it:
+
+```bash
+npm run typecheck
+```
+
 ## The file artifact panel
 
 Two triggers put a file on screen, and both produce the same envelope, so
@@ -250,17 +257,37 @@ One identity is deliberately left alone —
 `@deepseek-ai/dsh-session/types#SessionId`. It has to equal the agent lookup
 provider's wire identity, and it is not ours to rename.
 
-### No typecheck
+### Type-checking against the running harness
 
-This is the one plugin here without a `typecheck` script, and it is a real gap.
-Its client half imports harness client packages for the module augmentations
-that declare the composer slots it fills. Upstream resolves those with `link:`
-devDependencies into a sibling harness monorepo; installing them from npm
-instead deadlocks, because the published rc.7 packages peer `^0.1.0-rc.7`, npm
-resolves that to rc.8, and rc.8 peers `^0.1.0-rc.8`. Pinning rc.8 would install
-but would check against a version that is not the one running. The build is the
-guard instead: esbuild fails on unresolved non-external imports, and the build
-script asserts both halves contain what the loader needs.
+The client half imports harness client packages for the module augmentations
+that declare the composer slots it fills — without them, `conversation.input.dock`
+is an unknown string and the file cannot check at all.
+
+Neither usual answer works. Upstream resolves them with `link:` devDependencies
+into a sibling harness monorepo, which this repository does not have. Installing
+them from npm deadlocks: the published rc.7 packages peer `^0.1.0-rc.7`, npm
+resolves that to rc.8, and rc.8 peers `^0.1.0-rc.8`, so the graph has no
+solution. Pinning rc.8 installs, but then you are checking against a version
+that is not the one running — worse than not checking.
+
+So `typecheck` checks against the harness that IS running:
+
+```bash
+npm run typecheck --workspace=@my-dsh/at-file
+```
+
+`scripts/link-harness.mjs` symlinks the installed harness packages into
+`node_modules` first, preferring the profile's healed tree and falling back to
+the npx cache. The types cannot drift from the deployment, because they are the
+deployment. Symlinks rather than tsconfig `paths` keep ordinary resolution, so
+each package's `exports` map still governs subpaths like
+`@deepseek-ai/dsh-client-runtime/client`.
+
+Only the packages it imports are linked. A partial scope directory does not
+shadow the rest of `@deepseek-ai` — node resolves the full package path at each
+level — so schemastery still comes from this repository's lockfile and the
+build stays reproducible. `npm install` prunes the links, which is why
+`typecheck` rebuilds them every run instead of assuming a setup step.
 
 ## Language
 
