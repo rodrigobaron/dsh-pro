@@ -21,6 +21,7 @@ plugins/browser/lib/
 plugins/at-file/lib/
 plugins/search/lib/
 plugins/notification/lib/
+plugins/rewind/lib/
 
 # vision-toolkit: lib/ is bundled from upstream/, and the payload dirs are
 # copied out of upstream/ to sit beside it. upstream/ is the committed input.

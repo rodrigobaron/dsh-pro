@@ -26,14 +26,15 @@ preset is default.
 | `at-file` | `@path` references in the composer: a workspace path picker and filter settings |
 | `search` | free web search: ten engines with automatic fallback, no API key |
 | `notification` | desktop notifications when a session finishes a turn |
+| `rewind` | a rewind button on every user message: drop it and everything after |
 
 ## Adding a plugin
 
 Add a directory. The installer discovers it — there is no list to update.
 
-Most plugins here are built from `src/`. Three (`archived-sessions`,
-`vision-toolkit`, `search`) are repackaged from upstream releases rather than
-compiled: their published output is committed and the build script adapts it. Either
+Most plugins here are built from `src/`. Four (`archived-sessions`,
+`vision-toolkit`, `search`, `rewind`) are repackaged from upstream releases
+rather than compiled: their published output is committed and the build script adapts it. Either
 shape is just "a directory with a build script" as far as the installer is
 concerned.
 
@@ -533,7 +534,7 @@ bytes* stays, because changing it would silently break the match.
 
 ## Licensing
 
-Seven plugins here are derived from other people's work. Each keeps its upstream
+Eight plugins here are derived from other people's work. Each keeps its upstream
 LICENSE, and a NOTICE recording exactly what was changed:
 
 | Plugin | Upstream | License |
@@ -544,6 +545,7 @@ LICENSE, and a NOTICE recording exactly what was changed:
 | `at-file` | [omdsh-dev/dsh-at-file](https://github.com/omdsh-dev/dsh-at-file) | MIT |
 | `search` | [DDDMUC/dsh-free-search](https://github.com/DDDMUC/dsh-free-search) | MIT |
 | `notification` | [omdsh-dev/dsh-notification](https://github.com/omdsh-dev/dsh-notification) | MIT |
+| `rewind` | [omdsh-dev/dsh-recall](https://github.com/omdsh-dev/dsh-recall) | MIT |
 | `browser` | [Clizo1209/dsh-playwright-browser](https://github.com/Clizo1209/dsh-playwright-browser) | MIT |
 
 Everything else in this directory is MIT and original to this repository.

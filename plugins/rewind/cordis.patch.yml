@@ -1,0 +1,13 @@
+# Rewind the conversation. The host half serves POST /rewind, which appends a
+# durable `session/recall` tombstone so the message and everything after it
+# leave both the model-visible history and the transcript. (`session/recall`
+# is the harness's own event type and is deliberately NOT renamed.) The
+# browser half is
+# loaded from the package's `./client` export because the package declares
+# `dsh.client`, and puts a rewind button on every user message.
+#
+# NOTHING on disk is reverted: the log keeps every event, and code the agent
+# wrote during a rewound turn stays exactly as it is.
+- insert:
+    - id: rewind
+      name: '@my-dsh/rewind'
