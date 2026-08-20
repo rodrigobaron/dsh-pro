@@ -15,4 +15,5 @@ node_modules/
 # client-ui-file-canvas/lib/index.js is a hand-written host entry, and
 # client-ui-layout-wide/lib/ is the fork itself, not generated.
 plugins/context/lib/
+plugins/git-review/lib/
 plugins/client-ui-file-canvas/lib/client.js

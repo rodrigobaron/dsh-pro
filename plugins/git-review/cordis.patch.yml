@@ -1,0 +1,6 @@
+# Git review tab. The host half registers the /git/* routes the tab calls;
+# the browser half is loaded from the package's `./client` export because the
+# package declares `dsh.client`.
+- insert:
+    - id: git-review
+      name: '@my-dsh/git-review'
