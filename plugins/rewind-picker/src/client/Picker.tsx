@@ -31,7 +31,7 @@ function relativeTime(time: number, t: Translate): string {
 
 /** Map a host error code to a dictionary key, falling back to the generic one. */
 function errorKey(code: string | undefined): string {
-  const known = ['session-not-found', 'subagent-owned', 'agent-busy', 'message-not-found', 'recall-rejected', 'transport', 'rewind-unsupported']
+  const known = ['session-not-found', 'subagent-owned', 'agent-busy', 'message-not-found', 'rewind-rejected', 'transport']
   return known.includes(code ?? '') ? `error.${code}` : 'error.unknown'
 }
 

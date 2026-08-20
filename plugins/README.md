@@ -508,38 +508,49 @@ Two entry points, one route:
 Both POST `/rewind`, which appends a durable `session/recall` tombstone. The
 log keeps every event, so this survives a restart.
 
-### It does not work on any published harness
+### How it works without `session.recall()`
 
-`session.recall()` is core runtime support, not a plugin seam — upstream's own
-README says so. It does not exist in `@deepseek-ai/dsh-session@0.1.0-rc.7`, and
-a grep of rc.8 finds no match either, so **no published harness has ever
-shipped it**. Both entry points therefore fail at the final call.
+Upstream's host calls `session.recall()`. That is core runtime support rather
+than a plugin seam — its own README says so — and **no published harness has
+ever shipped it**: rc.7 has no such method, and a grep of rc.8 finds no match
+either. So the host here is ours, and uses public API only.
 
-The host checks for it and answers `501 rewind-unsupported` with a plain
-explanation, rather than letting the route reach the call and return a raw
-`agent.session.recall is not a function` — which reads as a bug in this plugin
-instead of a missing runtime feature. The UI is complete and correct; the day
-the harness ships recall, both halves work unchanged.
+The model-visible history is a **surface** projected over the append-only log,
+and a surface event may enter as a replacement: `{ op: 'replace', start, end }`
+substitutes one node for a whole range. Compaction uses exactly this to swap a
+stretch of history for a summary, and the type documentation states that "any
+surface-replacing producer may use it". A rewind replaces
+`[boundary .. last surface node]` with a single marker, so `deriveMessages()`
+stops projecting the rewound turns.
 
-Doing it without core support would mean re-implementing rewind at the plugin
-level: keeping boundaries in durable per-session state, trimming messages in
-`agent/pre-step` before the model sees them, and filtering the transcript
-client-side. That is a different design, not a fix, and it is not built.
+Two consequences follow from the mechanism, and both are deliberate:
 
-**Files are not reverted.** Nothing on disk is touched, so code the agent wrote
-during a rewound turn stays exactly as it is. That is the one real difference
-from the rewind in Claude Code, which also restores the working tree, and the
-dialog says so rather than hiding it in a tooltip.
+- **The op cannot empty a range** — a replacement always leaves exactly one
+  node. That node is a marker saying the conversation was rewound and how many
+  messages went with it. The model reads it on purpose: a silently shorter
+  history invites it to re-derive conclusions it has no record of reaching.
+- **Nothing is deleted.** Every original event stays in the log and no file is
+  touched. `planRewind` is the part where an off-by-one would shadow the wrong
+  range irreversibly, so it is pure and unit-tested
+  (`npm run test --workspace=@my-dsh/rewind`).
 
-### Why two packages
+### What it does not do: the transcript
 
-`rewind` is upstream's prebuilt bundle. Its button lives inside the user
-message, which means shadowing the framework's keyed user-bubble renderer and
-reproducing the bubble — content blocks, image gallery, lightbox and all.
-Upstream does that faithfully and redoing it would be risk without benefit, but
-a prebuilt blob also cannot be extended. So the command and its dialog are
-ours, in a companion package, driving the same route. Same split as
-`tool-file-canvas` / `client-ui-file-canvas`.
+The rewind is real for the model and **not** reflected in what you see. The
+harness's own docs are explicit that "a human transcript must project
+append-origin events rather than `session.surface`, because landed replacements
+shadow history the reader already saw" — so the conversation you are reading
+keeps every rewound message, exactly as compaction leaves everything visible
+after summarizing it.
+
+Hiding them client-side is not currently possible from a plugin: chat nodes are
+rendered by the framework's keyed renderers, and a slot entry can only *replace*
+one, never filter it and fall through for the rest. Upstream's approach relied
+on `dsh-client-runtime` filtering recalled events, which is the same core
+support that does not exist.
+
+So after a rewind: the model has genuinely forgotten, the composer has the
+message back to edit, and the transcript still shows the old exchange.
 
 ### Dialog layout
 

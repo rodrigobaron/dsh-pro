@@ -2,16 +2,16 @@
 /**
  * @my-dsh/rewind build.
  *
- *   lib/index.js  — host half: vendor/index.js, repackaged. Upstream ships it
- *                   prebuilt with no sources, so vendor/ holds its published
- *                   output verbatim and the edits below are asserted
- *                   exact-string rewrites; a changed upstream line fails the
- *                   build rather than shipping something unintended.
+ *   lib/index.js  — host half: OURS, compiled from src/. Upstream's prebuilt
+ *                   host calls session.recall(), which no published harness
+ *                   ships; src/surface.ts does the same job with the public
+ *                   surface-replacement op that compaction uses.
  *   lib/client.js — client half: vendor/client.js, repackaged the same way.
  *
  * Nothing is compiled here. The `/rewind` command and its picker live in the
  * companion @my-dsh/rewind-picker package, which drives this plugin's route.
  */
+import { build } from 'esbuild'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -41,33 +41,19 @@ function rewrite(source, from, to, why) {
 }
 
 // ── host half ────────────────────────────────────────────────────────────────
-let host = await readFile(join(ROOT, 'vendor', 'index.js'), 'utf8')
-host = rewrite(host, 'const name = "recall";', 'const name = "rewind";', 'cordis plugin name')
-host = rewrite(host, 'path: "/recall",', 'path: "/rewind",', 'route path')
-// The one Chinese fragment in the host half is a parenthetical gloss in the
-// module docstring; this repository writes English only.
-host = rewrite(host, 'Message recall (撤回) for the DSH Web UI.', 'Message rewind for the DSH Web UI.', 'docstring gloss')
-// A capability check, because the failure is otherwise unreadable.
-//
-// `session.recall()` is core runtime support, not a plugin seam — upstream's
-// own README says so. It does not exist in @deepseek-ai/dsh-session rc.7, and
-// grepping rc.8 finds no match either, so no published harness has it. Without
-// this check the route reaches the call and returns the raw TypeError, which
-// reads as "Recall failed: agent.session.recall is not a function" and looks
-// like a bug in this plugin rather than a missing runtime feature.
-host = rewrite(
-  host,
-  '\t\t\ttry {\n\t\t\t\tconst logged = agent.session.recall(boundary);',
-  `\t\t\tif (typeof agent.session.recall !== "function") {
-\t\t\t\tsendJson(res, 501, errorBody("rewind-unsupported", "this DeepSeek Harness build has no session recall support, which is core runtime behaviour rather than something a plugin can provide", { sessionId }));
-\t\t\t\treturn;
-\t\t\t}
-\t\t\ttry {
-\t\t\t\tconst logged = agent.session.recall(boundary);`,
-  'session.recall capability check',
-)
-
-await writeFile(join(ROOT, 'lib', 'index.js'), host)
+// Ours, compiled from src/. Upstream's prebuilt host calls session.recall(),
+// which no published @deepseek-ai/dsh-session has ever shipped; the surface
+// replacement in src/surface.ts uses only public API instead.
+await build({
+  entryPoints: [join(ROOT, 'src', 'index.ts')],
+  outfile: join(ROOT, 'lib', 'index.js'),
+  format: 'esm',
+  platform: 'node',
+  target: 'es2022',
+  bundle: true,
+  external: ['@deepseek-ai/cordis', '@deepseek-ai/dsh-*'],
+  sourcemap: false,
+})
 
 // ── client half ──────────────────────────────────────────────────────────────
 // Kept from upstream rather than rewritten. The rewind button lives on every
@@ -135,7 +121,7 @@ await writeFile(join(ROOT, 'lib', 'client.js'), client)
 const outHost = await readFile(join(ROOT, 'lib', 'index.js'), 'utf8')
 const outClient = await readFile(join(ROOT, 'lib', 'client.js'), 'utf8')
 for (const [label, source, expected] of [
-  ['lib/index.js', outHost, ['function apply', '"/rewind"', 'session.recall(boundary)']],
+  ['lib/index.js', outHost, ['function apply', '"/rewind"', 'op: "replace"']],
   ['lib/client.js', outClient, ['__ModuleLoader__', `id: "${pkg.name}"`, 'fetch("/rewind"']],
 ]) {
   for (const needle of expected) {
@@ -143,11 +129,10 @@ for (const [label, source, expected] of [
   }
 }
 for (const [label, source] of [['lib/index.js', outHost], ['lib/client.js', outClient]]) {
-  if (source.includes('"/recall"') || source.includes('fetch("/recall"')) {
-    throw new Error(`build: the old /recall route survived in ${label}`)
-  }
+  if (source.includes('fetch("/recall"')) throw new Error(`build: the old /recall route survived in ${label}`)
   if (source.includes('"dsh-recall"')) throw new Error(`build: dsh-recall survived as an id in ${label}`)
+  if (source.includes('session.recall(')) throw new Error(`build: a session.recall() call survived in ${label}`)
 }
 console.log(`built ${pkg.name}:`)
-console.log(`  lib/index.js  (host half, repackaged, route /rewind) ${(outHost.length / 1024).toFixed(0)} kB`)
+console.log(`  lib/index.js  (host half, ours, surface-replacement rewind) ${(outHost.length / 1024).toFixed(0)} kB`)
 console.log(`  lib/client.js (client half, repackaged, per-message rewind buttons) ${(outClient.length / 1024).toFixed(0)} kB`)

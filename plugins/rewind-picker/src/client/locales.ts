@@ -30,9 +30,8 @@ export const en = {
   'error.subagent-owned': 'A subagent owns this session, so it cannot be rewound here.',
   'error.agent-busy': 'The agent is running. Stop the current turn, then rewind.',
   'error.message-not-found': 'That message is no longer in the conversation.',
-  'error.recall-rejected': 'The session refused that rewind point: {message}',
+  'error.rewind-rejected': 'That rewind point was refused: {message}',
   'error.transport': 'The rewind request did not reach the server: {message}',
-  'error.rewind-unsupported': 'This DeepSeek Harness build cannot rewind: its session runtime has no recall support, which is core behaviour rather than something a plugin can add.',
   'error.unknown': 'The rewind failed: {message}',
 } satisfies Record<string, string>
 

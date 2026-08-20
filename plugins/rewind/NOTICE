@@ -1,40 +1,54 @@
-This package repackages dsh-recall by the dsh-recall authors, used under the
-MIT License. The original project lives at:
+The browser half of this package repackages dsh-recall, used under the MIT
+License. The original project lives at:
 
     https://github.com/omdsh-dev/dsh-recall
 
-Upstream publishes this plugin prebuilt, with no sources, so vendor/ holds its
-published lib/ output verbatim and scripts/build.mjs adapts it. Every edit is
-an asserted exact-string rewrite, so a changed upstream line fails the build
-rather than silently shipping something unintended.
+    vendor/client.js is its published bundle verbatim; scripts/build.mjs
+    adapts it through asserted exact-string rewrites, so a changed upstream
+    line fails the build rather than silently shipping something unintended.
+    The rewind button sits inside the user message, which means shadowing the
+    framework's keyed user-bubble renderer and reproducing the bubble —
+    content blocks, image gallery, lightbox and all. Upstream does that
+    faithfully and redoing it would be risk without benefit.
+
+The host half is NOT upstream's. Upstream calls `session.recall()`, which is
+core runtime support rather than a plugin seam — its own README says so — and
+no published @deepseek-ai/dsh-session has ever shipped it: rc.7 has no such
+method and a grep of rc.8 finds no match either. Its host is therefore dead
+code on any real harness, and vendor/index.js is not carried.
+
+src/ implements the same feature with public API only. The model-visible
+history is a *surface* projected over the append-only log, and a surface event
+may enter as a replacement — `{ op: 'replace', start, end }` substitutes one
+node for a whole range. Compaction uses exactly this to swap a stretch of
+history for a summary, and the type documentation states that "any
+surface-replacing producer may use it". Rewinding replaces
+[boundary .. last surface node] with a single marker, so `deriveMessages()`
+stops projecting the rewound turns.
+
+Two consequences worth stating plainly:
+
+  - The replacement op cannot empty a range; it always leaves exactly one node.
+    That node is a marker message saying the conversation was rewound and how
+    many messages went with it. The model reads it, which is deliberate: a
+    silently shorter history invites the model to re-derive conclusions it has
+    no record of reaching.
+
+  - Nothing is deleted. Every original event stays in the log, and no file on
+    disk is touched, so code written during a rewound turn stays exactly as it
+    is. This is the one real difference from the rewind in Claude Code, which
+    also restores the working tree.
 
 Renamed to @my-dsh/rewind, and the route with it: POST /recall is now
-POST /rewind. The client bundle's __ModuleLoader__ id follows the package
-name, because the web boot manifest looks a bundle up by that name.
-
-Two identities are deliberately NOT renamed. `session/recall` is the harness's
-own durable event type, and the `recall` node kind is matched against it; both
-belong to the runtime rather than to this package. Renaming either would break
-the fold that renders the "recalled message" notice.
+POST /rewind. The client bundle's __ModuleLoader__ id follows the package name,
+because the web boot manifest looks a bundle up by that name. The `recall` node
+kind and the `session/recall` event definition in the browser half are left
+alone: they are the runtime's names, not this package's.
 
 English only. Upstream registers a Simplified Chinese dictionary alongside
-English; the English dictionary is now registered under both locale ids, so
-selecting Chinese leaves the harness in Chinese and this plugin in English
-rather than rendering raw message keys from an unregistered namespace.
-
-The client is repackaged rather than rewritten, unlike the other ports here.
-The rewind button sits on every user message, which means shadowing the
-framework's keyed user-bubble renderer and reproducing the bubble — content
-blocks, image gallery, lightbox and all. Upstream already does that faithfully;
-redoing it would be risk without benefit.
+English; the English one is now registered under both locale ids.
 
 The `/rewind` command and its message picker are not upstream at all. They live
-in the companion @my-dsh/rewind-picker package, which drives this plugin's
-route.
-
-What this does NOT do: revert files. The log keeps every event and nothing on
-disk is touched, so code the agent wrote during a rewound turn stays exactly as
-it is. This is upstream's design, and it is the one real difference from the
-rewind feature in Claude Code, which also restores the working tree.
+in the companion @my-dsh/rewind-picker package, which drives this route.
 
 The MIT License text, including its copyright notice, is in LICENSE.
