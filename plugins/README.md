@@ -19,16 +19,22 @@ Then restart the harness.
 | `context` | a context dashboard tab and the `/context` command |
 | `git-review` | a Git tab: review the diff, stage, discard, commit, and push |
 | `archived-sessions` | a session manager in Settings: browse, archive, and delete conversations |
+| `vision-toolkit` | vision skills for the agent: image Q&A, OCR, grounding, pixel diff |
 
 ## Adding a plugin
 
 Add a directory. The installer discovers it — there is no list to update.
 
-Most plugins here are built from `src/`. One (`archived-sessions`) is
-repackaged from an upstream release that ships no sources: its published output
-sits in `vendor/` and its build script adapts rather than compiles it. Either
+Most plugins here are built from `src/`. Two (`archived-sessions`,
+`vision-toolkit`) are repackaged from upstream releases rather than compiled:
+their published output is committed and the build script adapts it. Either
 shape is just "a directory with a build script" as far as the installer is
 concerned.
+
+Repackaging exists because upstream plugins are installed by `dsh plugin add`,
+which npm-installs their runtime dependencies into the profile. This installer
+only copies files, so a plugin's unresolvable dependencies are inlined at build
+time instead — otherwise it dies at load with `ERR_MODULE_NOT_FOUND`.
 
 A plugin directory holds a `package.json` and may contribute:
 
@@ -128,5 +134,6 @@ LICENSE, and a NOTICE recording exactly what was changed:
 | --- | --- | --- |
 | `context` | [bowenliang123/dsh-context](https://github.com/bowenliang123/dsh-context) | Apache-2.0 |
 | `archived-sessions` | [Zephyr-vibe/dsh-archived-sessions](https://github.com/Zephyr-vibe/dsh-archived-sessions) | MIT |
+| `vision-toolkit` | [Anionex/dsh-vision-toolkit](https://github.com/Anionex/dsh-vision-toolkit) | MIT |
 
 Everything else in this directory is MIT and original to this repository.
