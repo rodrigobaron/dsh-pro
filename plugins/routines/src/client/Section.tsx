@@ -49,6 +49,9 @@ export function makeSection(fallbackT: Translate): (props: SectionProps) => Reac
     const [error, setError] = React.useState<string | null>(null)
     const [busy, setBusy] = React.useState<string | null>(null)
     const [adding, setAdding] = React.useState(false)
+    // null while creating, the routine's id while editing. The form is the
+    // same either way — only the verb and the button copy differ.
+    const [editingId, setEditingId] = React.useState<string | null>(null)
     const [draft, setDraft] = React.useState({ title: '', prompt: '', cron: '', workdir: '', presetId: '', model: '' })
     const [workspaces, setWorkspaces] = React.useState<readonly { id: string; path: string }[]>([])
     const [presets, setPresets] = React.useState<readonly PresetOption[]>([])
@@ -88,7 +91,7 @@ export function makeSection(fallbackT: Translate): (props: SectionProps) => Reac
     }
 
     const submit = async (): Promise<void> => {
-      setBusy('new')
+      setBusy(editingId ?? 'new')
       try {
         // `provider:model` splits on the FIRST colon only — model ids contain
         // colons and slashes of their own (deepseek/deepseek-v4-flash-0731).
@@ -97,7 +100,7 @@ export function makeSection(fallbackT: Translate): (props: SectionProps) => Reac
           provider: draft.model.slice(0, separator),
           model: draft.model.slice(separator + 1),
         }
-        await createRoutine({
+        const payload = {
           title: draft.title.trim(),
           prompt: draft.prompt.trim(),
           cron: draft.cron.trim(),
@@ -108,15 +111,41 @@ export function makeSection(fallbackT: Translate): (props: SectionProps) => Reac
           target: { workdir: draft.workdir },
           presetId: draft.presetId,
           ...(modelSelection === undefined ? {} : { modelSelection }),
-        })
-        setDraft({ title: '', prompt: '', cron: '', workdir: '', presetId: '', model: '' })
-        setAdding(false)
+        }
+        // PATCH re-arms the schedule when it carries a cron, so an edited
+        // routine's next run is recomputed rather than left on the old slot.
+        if (editingId === null) await createRoutine(payload)
+        else await updateRoutine(editingId, payload)
+        closeForm()
         await refresh()
       } catch (cause) {
         setError(cause instanceof RoutineError ? cause.message : String(cause))
       } finally {
         setBusy(null)
       }
+    }
+
+    /** Open the form on an existing routine, pre-filled from its record. */
+    const beginEdit = (routine: Routine): void => {
+      setDraft({
+        title: routine.title,
+        prompt: routine.prompt,
+        cron: routine.schedule?.cron ?? '',
+        workdir: routine.target?.workdir ?? '',
+        presetId: routine.presetId ?? '',
+        model: routine.modelSelection === undefined ? ''
+          : `${routine.modelSelection.provider}:${routine.modelSelection.model}`,
+      })
+      setEditingId(routine.id)
+      setAdding(true)
+      setError(null)
+    }
+
+    /** Leave the form without saving, from either verb. */
+    const closeForm = (): void => {
+      setAdding(false)
+      setEditingId(null)
+      setDraft({ title: '', prompt: '', cron: '', workdir: '', presetId: '', model: '' })
     }
 
     const field = (
@@ -163,12 +192,12 @@ export function makeSection(fallbackT: Translate): (props: SectionProps) => Reac
     const modelChoices = React.useMemo(() => {
       const seen = new Set<string>()
       const out: { value: string; label: string }[] = []
-      // The deployment default leads. Every provider route enumerates its
-      // models whether or not a key is stored for it, so the catalog cannot say
-      // which ones actually work — and a routine pointed at a keyless provider
-      // fails at every fire with "no API key for provider route". The default
-      // is by construction the configured one, so it is the safe first pick;
-      // the help text says the rest need their key on the Models page.
+      // The deployment default leads, unlabelled. Every provider route
+      // enumerates its models whether or not a key is stored for it, so the
+      // catalog cannot say which ones actually work — and a routine pointed at
+      // a keyless provider fails at every fire with "no API key for provider
+      // route". The default is by construction the configured one, so putting
+      // it first makes the safe pick the obvious one without captioning it.
       const groups = [...models.groups].sort((a, b) =>
         Number(b.id === models.default?.provider) - Number(a.id === models.default?.provider))
       for (const group of groups) {
@@ -176,25 +205,26 @@ export function makeSection(fallbackT: Translate): (props: SectionProps) => Reac
           const base = `${group.name} · ${model.name}`
           if (seen.has(base)) continue
           seen.add(base)
-          const isDefault = group.id === models.default?.provider && model.id === models.default?.model
           // provider:model — the wire shape the host expects, kept whole in the
           // option value so nothing has to re-parse a display label.
-          out.push({
-            value: `${group.id}:${model.id}`,
-            label: isDefault ? t('model.suffix.default', { label: base }) : base,
-          })
+          out.push({ value: `${group.id}:${model.id}`, label: base })
         }
       }
       // The default may not be the first model of its own group.
       return out.sort((a, b) =>
         Number(b.value === `${models.default?.provider}:${models.default?.model}`)
         - Number(a.value === `${models.default?.provider}:${models.default?.model}`))
-    }, [models, t])
+    }, [models])
 
     const complete = draft.title.trim() !== '' && draft.prompt.trim() !== '' && draft.cron.trim() !== ''
       && draft.workdir !== '' && draft.presetId !== '' && draft.model !== ''
 
+    const editingTitle = editingId === null ? null
+      : routines?.find(routine => routine.id === editingId)?.title ?? ''
+
     const form = h('div', { className: 'dsh_rt_form' },
+      editingTitle === null ? null
+        : h('span', { className: 'dsh_rt_label' }, t('editing', { title: editingTitle })),
       field('title', draft.title, v => setDraft(d => ({ ...d, title: v }))),
       field('prompt', draft.prompt, v => setDraft(d => ({ ...d, prompt: v })), { area: true }),
       field('cron', draft.cron, v => setDraft(d => ({ ...d, cron: v })), { mono: true, help: 'cron.help' }),
@@ -215,13 +245,14 @@ export function makeSection(fallbackT: Translate): (props: SectionProps) => Reac
       complete || draft.title.trim() === '' ? null
         : h('span', { className: 'dsh_rt_help' }, t('required')),
       h('div', { className: 'dsh_rt_formActions' },
-        h('button', { type: 'button', className: 'dsh_rt_btn', onClick: () => setAdding(false), disabled: busy === 'new' }, t('cancel')),
+        h('button', { type: 'button', className: 'dsh_rt_btn', onClick: closeForm, disabled: busy !== null }, t('cancel')),
         h('button', {
           type: 'button',
           className: 'dsh_rt_btn dsh_rt_primary',
-          disabled: busy === 'new' || !complete,
+          disabled: busy !== null || !complete,
           onClick: () => { void submit() },
-        }, busy === 'new' ? t('saving') : t('save')),
+        }, busy !== null ? t(editingId === null ? 'saving' : 'updating')
+          : t(editingId === null ? 'save' : 'update')),
       ),
     )
 
@@ -249,6 +280,10 @@ export function makeSection(fallbackT: Translate): (props: SectionProps) => Reac
           }, t('run')),
           h('button', {
             type: 'button', className: 'dsh_rt_btn', disabled: isBusy,
+            onClick: () => beginEdit(routine),
+          }, t('edit')),
+          h('button', {
+            type: 'button', className: 'dsh_rt_btn', disabled: isBusy,
             // `scheduleEnabled`, not `enabled`: the host PATCH reads that name and
             // ignores fields it does not know, returning 200 either way — so the
             // wrong key looks like a working request that changes nothing.
@@ -271,7 +306,10 @@ export function makeSection(fallbackT: Translate): (props: SectionProps) => Reac
         ? h('p', { className: 'dsh_rt_help' }, t('loading'))
         : routines.length === 0 && !adding
           ? h('p', { className: 'dsh_rt_help' }, t('empty'))
-          : h('div', { className: 'dsh_rt_list' }, routines.map(card)),
+          // While editing, the card being edited is hidden: the form already
+          // shows its values, and two copies of one routine invite editing the
+          // stale one.
+          : h('div', { className: 'dsh_rt_list' }, routines.filter(r => r.id !== editingId).map(card)),
       adding ? form : h('button', { type: 'button', className: 'dsh_rt_btn', onClick: () => setAdding(true) }, t('add')),
       error === null ? null : h('p', { className: 'dsh_rt_error' }, t('error', { message: error })),
     )

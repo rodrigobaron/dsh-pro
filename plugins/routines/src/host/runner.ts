@@ -300,7 +300,33 @@ export class RoutineRunner {
       ...(presetSetup === undefined ? {} : { setup: presetSetup }),
     })
     await this.attachWorkspace(sessionId, job.target.workdir).catch(() => undefined)
+    this.nameSession(handle, job.title)
     return handle
+  }
+
+  /**
+   * Name a routine's session after the routine, behind a clock emoji.
+   *
+   * Without this the auto-titler names the session from the routine's own
+   * prompt, so a sidebar full of scheduled runs reads like a sidebar full of
+   * ordinary conversations. `rename` PINS the title, which also stops the
+   * generator overwriting it after the first turn.
+   *
+   * Only NEW sessions are named. A routine pinned to an existing conversation
+   * is a guest there — renaming someone's session out from under them is not
+   * this plugin's business.
+   *
+   * Failure is not worth aborting a run for: a missing service or a rejected
+   * title costs a nice name, not the work.
+   */
+  private nameSession(handle: HostAgentHandle, title: string): void {
+    const trimmed = title.trim()
+    if (trimmed === '') return
+    try {
+      this.ctx.get('sessionTitle')?.rename(handle.agent.session, `\u23f0 ${trimmed}`)
+    } catch (error) {
+      console.warn('[@my-dsh/routines] could not name the session:', error)
+    }
   }
 
   /**

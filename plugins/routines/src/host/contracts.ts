@@ -111,6 +111,20 @@ export interface HostAgentPresets {
 }
 
 /**
+ * The `sessionTitle` service (subset): naming a routine's session after the
+ * routine itself.
+ */
+export interface HostSessionTitle {
+  /**
+   * Accept an explicit title. This PINS it — in-flight automatic generation is
+   * superseded and later user messages schedule none — which is what keeps a
+   * routine's session named after the routine instead of being retitled from
+   * its own prompt.
+   */
+  rename(session: object, title: string): unknown
+}
+
+/**
  * The `sessionPersistence` service (subset): cold session inspection used to
  * rebuild a resumed session's recorded preset selection.
  */
@@ -273,6 +287,8 @@ export interface HostPluginContext {
   get(service: 'llm'): HostLlm | undefined
   /** The preset roster, when mounted ('agentPresets'). */
   get(service: 'agentPresets'): HostAgentPresets | undefined
+  /** The session persistence service, when mounted ('sessionPersistence'). */
+  get(service: 'sessionTitle'): HostSessionTitle | undefined
   /** The session persistence service, when mounted ('sessionPersistence'). */
   get(service: 'sessionPersistence'): HostSessionPersistence | undefined
   get(service: string): unknown

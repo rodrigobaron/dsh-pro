@@ -697,6 +697,22 @@ Two things the raw data needed before it was usable:
   appeared twice under an identical label. Deduped by what the user actually
   sees, first wins, which keeps the primary routes.
 
+### Editing and session naming
+
+Every card has **Edit**, which reopens the same form pre-filled from the record
+and saves with `PATCH`. The card being edited is hidden while the form is open,
+so one routine is never on screen twice inviting an edit of the stale copy. A
+`PATCH` carrying a cron re-arms the schedule, so an edited routine's next run is
+recomputed rather than left on its old slot.
+
+A routine's new sessions are named **⏰ <routine title>**. Without it the
+auto-titler names them from the routine's own prompt, and a sidebar full of
+scheduled runs reads like a sidebar full of ordinary conversations. `rename()`
+*pins* the title, so the generator does not overwrite it after the first turn.
+Only new sessions are named — a routine pinned to an existing conversation is a
+guest there, and renaming someone's session out from under them is not this
+plugin's business.
+
 ### The silent-field traps
 
 `PATCH /api/routines/jobs` ignores fields it does not recognise and still
