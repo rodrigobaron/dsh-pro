@@ -1,7 +1,13 @@
-# dsh-pro
+<div align="center">
+
+<img src="docs/assets/logo.png" alt="DeepSeek Harness Pro" width="220">
+
+# DeepSeek Harness Pro — Preview
 
 An opinionated coding agent built on top of
 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness).
+
+</div>
 
 DSH ships the runtime — sessions, agents, tools, a web GUI — and leaves the
 product decisions open. dsh-pro makes them: a file artifact panel, git review,
