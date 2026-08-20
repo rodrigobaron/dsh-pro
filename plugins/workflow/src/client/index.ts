@@ -13,7 +13,7 @@
  * `event.time`, and suppresses the stock node so one run does not render
  * twice.
  */
-import { apply, isWorkflowEvent, runIdOf, seed, RUN_START, type FoldEvent, type RunState } from './fold.ts'
+import { apply, isWorkflowEvent, runIdOf, seed, stepOf, RUN_START, type FoldEvent, type RunState } from './fold.ts'
 import { en, NS } from './locales.ts'
 import { makeWorkflowNode } from './WorkflowNode.tsx'
 import { ensureStyles } from './styles.ts'
@@ -51,7 +51,7 @@ export const workflowDefinition = {
     if (!isWorkflowEvent(event)) return null
     const runId = runIdOf(event)
     if (runId === null) return null
-    return { id: runId, role: event.type === RUN_START ? 'start' as const : 'update' as const }
+    return { id: runId, role: stepOf(event.type) === RUN_START ? 'start' as const : 'update' as const }
   },
   start: (_context: unknown, match: Match): RunState => seed(match.event),
   update: (context: { state: RunState }, match: Match): RunState => apply(context.state, match.event),

@@ -42,11 +42,37 @@ export interface RunState {
   readonly members: readonly Member[]
 }
 
-/** The four event types this fold consumes. */
-export const RUN_START = 'tool-workflow/run-start'
-export const AGENT_START = 'tool-workflow/agent-start'
-export const AGENT_END = 'tool-workflow/agent-end'
-export const RUN_END = 'tool-workflow/run-end'
+/**
+ * The two event families this fold consumes.
+ *
+ * `tool-workflow/*` is the harness's own record, written only for TOP-LEVEL
+ * workflow calls. `workflow-view/*` is this plugin's host half filling the
+ * gap: a workflow launched from inside a Code Mode program has `exec.parent`
+ * set, which is exactly the condition under which the harness writes nothing.
+ *
+ * The two never describe the same run, so folding both needs no de-duplication
+ * — only a suffix match, since the payloads are deliberately identical.
+ */
+const FAMILIES = ['tool-workflow/', 'workflow-view/'] as const
+
+export const RUN_START = 'run-start'
+export const AGENT_START = 'agent-start'
+export const AGENT_END = 'agent-end'
+export const RUN_END = 'run-end'
+
+/**
+ * The lifecycle step an event describes, whichever family wrote it.
+ * @param type - the session event type.
+ * @returns the bare step name, or null when the event is not ours.
+ */
+export function stepOf(type: string): string | null {
+  for (const family of FAMILIES) {
+    if (!type.startsWith(family)) continue
+    const step = type.slice(family.length)
+    if (step === RUN_START || step === AGENT_START || step === AGENT_END || step === RUN_END) return step
+  }
+  return null
+}
 
 /** Minimal event shape; the harness's own type is richer than this fold needs. */
 export interface FoldEvent {
@@ -64,8 +90,7 @@ export function runIdOf(event: FoldEvent): string | null {
 
 /** Whether this fold cares about the event at all. */
 export function isWorkflowEvent(event: FoldEvent): boolean {
-  return event.type === RUN_START || event.type === AGENT_START
-    || event.type === AGENT_END || event.type === RUN_END
+  return stepOf(event.type) !== null
 }
 
 /**
@@ -128,7 +153,8 @@ function readStopReason(reason: unknown): RunStatus {
  * @returns the next state.
  */
 export function apply(state: RunState, event: FoldEvent): RunState {
-  if (event.type === AGENT_START) {
+  const step = stepOf(event.type)
+  if (step === AGENT_START) {
     const seq = event.data?.['seq']
     const label = event.data?.['label']
     if (typeof seq !== 'number') return state
@@ -147,7 +173,7 @@ export function apply(state: RunState, event: FoldEvent): RunState {
       }],
     }
   }
-  if (event.type === AGENT_END) {
+  if (step === AGENT_END) {
     const seq = event.data?.['seq']
     if (typeof seq !== 'number') return state
     const outcome = readOutcome(event.data?.['outcome'])
@@ -159,7 +185,7 @@ export function apply(state: RunState, event: FoldEvent): RunState {
     })
     return touched ? { ...state, members } : state
   }
-  if (event.type === RUN_END) {
+  if (step === RUN_END) {
     // A run that ends with members still open was interrupted mid-flight; the
     // members are reported that way rather than left spinning forever.
     const members = state.members.map(member =>

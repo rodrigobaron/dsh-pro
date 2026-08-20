@@ -759,6 +759,38 @@ that returns null — so one run does not appear twice. Shadowing is the only wa
 to take a node off the flow: a slot entry can replace a keyed renderer, never
 filter one.
 
+### Code Mode runs
+
+`dsh-tool-workflow` records a run only when it is a top-level tool call:
+
+```js
+const recordsRun = exec.parent === void 0
+if (recordsRun) recorder.start(parent.session, run)
+```
+
+A workflow launched from inside a **Code Mode** program has a parent, so
+nothing is written and the transcript shows only the raw tool card — no tree,
+from this plugin or the stock one. The host half here records exactly those
+runs, under its own `workflow-view/*` event names so the two families never
+collide and a top-level run is never recorded twice. The fold reads both;
+their payloads are deliberately identical, so it only needs a suffix match.
+
+The engine emits everything needed on the context (`workflow/start`,
+`/agent-start`, `/agent-end`, `/end`). The one thing it does not carry is
+*which session* to write to — `WorkflowRunInfo` is `{id, meta}` — so the
+session comes from the `workflow` tool call in flight when the run starts. With
+two nested calls running at once there is no way to tell which is which, and
+putting a run in the wrong conversation is worse than not drawing it, so that
+case is skipped and logged.
+
+Records are log-only: they carry no `surfaceOp`, so nothing here ever reaches
+the model.
+
+**Inject nothing.** This half only registers context listeners, and `ctx.on`
+needs no service to exist first. Injecting `workflowEngine` looked tidier and
+took the whole boot down — the engine is not provided as a root service, so the
+row sat pending and `dsh` refused to start.
+
 ### The live clock
 
 Nothing re-renders a chat node between session events, so elapsed time would

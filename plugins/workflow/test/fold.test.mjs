@@ -56,5 +56,15 @@ const cancelled = apply(seed(ev('tool-workflow/run-start', 1, { runId: 'r3', nam
   ev('tool-workflow/run-end', 9, { runId: 'r3', stopReason: 'cancelled' }))
 eq('a cancelled run reads cancelled', cancelled.status, 'cancelled')
 
+// The Code Mode family folds identically — same payloads, different prefix.
+let v = seed(ev('workflow-view/run-start', 10, { runId: 'v1', name: 'nested' }))
+v = apply(v, ev('workflow-view/agent-start', 20, { runId: 'v1', seq: 1, label: 'a', phase: 'P' }))
+v = apply(v, ev('workflow-view/agent-end', 40, { runId: 'v1', seq: 1, outcome: 'ok' }))
+v = apply(v, ev('workflow-view/run-end', 50, { runId: 'v1', stopReason: 'completed' }))
+eq('the Code Mode family folds like the harness family',
+  [v.name, v.status, v.members[0].status, v.members[0].endedAt - v.members[0].startedAt], ['nested', 'ok', 'ok', 20])
+eq('a foreign prefix is still ignored',
+  apply(v, ev('other/agent-start', 60, { runId: 'v1', seq: 9, label: 'x' })) === v, true)
+
 console.log(`\n${pass} passed, ${fail} failed`)
 process.exit(fail === 0 ? 0 : 1)

@@ -52,8 +52,13 @@ await writeFile(join(ROOT, 'lib', 'client.js'), [
 ].join('\n'))
 
 const client = await readFile(join(ROOT, 'lib', 'client.js'), 'utf8')
-for (const needle of ['__ModuleLoader__', 'tool-workflow/run-start', 'workflow-run']) {
+for (const needle of ['__ModuleLoader__', 'tool-workflow/', 'workflow-view/', 'workflow-run']) {
   if (!client.includes(needle)) throw new Error(`build: lib/client.js is missing ${needle}`)
 }
+const host = await readFile(join(ROOT, 'lib', 'index.js'), 'utf8')
+for (const needle of ['workflow/start', 'workflow/agent-start', 'tools/execute', 'workflow-view/run-start']) {
+  if (!host.includes(needle)) throw new Error(`build: lib/index.js is missing ${needle}`)
+}
 console.log(`built ${pkg.name}:`)
+console.log(`  lib/index.js  (host half, Code Mode run recorder) ${(host.length / 1024).toFixed(1)} kB`)
 console.log(`  lib/client.js (progress tree + stock-node suppression) ${(client.length / 1024).toFixed(0)} kB`)
