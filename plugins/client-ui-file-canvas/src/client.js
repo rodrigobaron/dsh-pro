@@ -67,6 +67,103 @@ const ICON_BUTTON = {
 };
 
 /**
+ * An eye, for the preview tab. Hand-drawn because the primitives ship no
+ * preview glyph; the reference artifact canvas does the same.
+ */
+function EyeIcon() {
+  return h(
+    "svg",
+    { width: 16, height: 16, viewBox: "0 0 16 16", fill: "none", "aria-hidden": true },
+    h("path", {
+      d: "M1.5 8s2.5-4.5 6.5-4.5S14.5 8 14.5 8 12 12.5 8 12.5 1.5 8 1.5 8Z",
+      stroke: "currentColor",
+      strokeWidth: "1.5",
+      strokeLinejoin: "round",
+    }),
+    h("circle", { cx: "8", cy: "8", r: "2", fill: "currentColor" }),
+  );
+}
+
+/**
+ * Preview and Source as two tabs of one segmented control, rather than a single
+ * button that swaps meaning when pressed.
+ *
+ * A lone toggle makes you read its icon to work out which state you are in; two
+ * tabs with a thumb behind the active one say it directly, and each click has a
+ * fixed destination instead of depending on where you already were.
+ */
+function ViewToggle({ view, onChange }) {
+  const options = [
+    { value: "preview", label: "Preview", icon: h(EyeIcon, null) },
+    { value: "source", label: "Source", icon: IconCodeOutline16 ? h(IconCodeOutline16, null) : "</>" },
+  ];
+  const activeIndex = view === "source" ? 1 : 0;
+  return h(
+    "div",
+    {
+      role: "tablist",
+      "aria-label": "View",
+      style: {
+        position: "relative",
+        display: "inline-flex",
+        background: "var(--dsw-alias-interactive-bg-hover)",
+        borderRadius: "999px",
+        padding: "2px",
+      },
+    },
+    h("span", {
+      "aria-hidden": true,
+      style: {
+        position: "absolute",
+        top: "2px",
+        bottom: "2px",
+        left: "2px",
+        width: "calc(50% - 2px)",
+        background: "var(--dsw-alias-button-floating-fill, var(--dsw-alias-bg-layer-1))",
+        borderRadius: "999px",
+        boxShadow: "0 1px 2px rgba(0, 0, 0, 0.15)",
+        transition: "transform 160ms ease",
+        transform: activeIndex === 1 ? "translateX(100%)" : "translateX(0)",
+      },
+    }),
+    ...options.map((option) =>
+      h(
+        "button",
+        {
+          key: option.value,
+          role: "tab",
+          "aria-selected": view === option.value,
+          "aria-label": option.label,
+          title: option.label,
+          // Each tab selects itself. The reference flips the view whichever tab
+          // is clicked, which makes clicking the ALREADY-active tab switch away
+          // from it.
+          onClick: () => onChange(option.value),
+          style: {
+            position: "relative",
+            zIndex: 1,
+            minWidth: "32px",
+            padding: "4px 8px",
+            border: "none",
+            background: "transparent",
+            cursor: "pointer",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color:
+              view === option.value
+                ? "var(--dsw-alias-label-primary)"
+                : "var(--dsw-alias-label-secondary)",
+            transition: "color 160ms ease",
+          },
+        },
+        option.icon,
+      ),
+    ),
+  );
+}
+
+/**
  * One header control. `Icon` may be undefined on a harness whose primitives
  * predate it, in which case `fallback` is drawn as text rather than the button
  * disappearing.
@@ -447,17 +544,7 @@ function FileCanvas(props) {
         : null,
       h("span", { style: { fontSize: "11px", opacity: 0.6 } }, formatBytes(envelope.size)),
       hasSource(envelope)
-        ? h(IconButton, {
-            Icon: IconCodeOutline16,
-            fallback: showSource ? "Preview" : "Source",
-            label: showSource ? "Show preview" : "Show source",
-            onClick: () => setView(showSource ? "preview" : "source"),
-            // Pressed state, so a toggle reads as a toggle rather than as a
-            // button that does nothing visible.
-            style: showSource
-              ? { background: "var(--dsw-alias-bg-layer-2)", color: "var(--dsw-alias-label-primary)" }
-              : {},
-          })
+        ? h(ViewToggle, { view: showSource ? "source" : "preview", onChange: setView })
         : null,
       envelope.url
         ? h(IconButton, {
