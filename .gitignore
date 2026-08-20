@@ -27,3 +27,4 @@ plugins/vision-toolkit/runtime/
 plugins/vision-toolkit/workers/
 plugins/vision-toolkit/patches/
 plugins/client-ui-file-canvas/lib/client.js
+plugins/english-only/lib/client.js
