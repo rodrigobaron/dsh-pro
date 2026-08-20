@@ -74,6 +74,25 @@ export function discard(dir: string, paths: string[], untracked: boolean): Promi
   return post('/discard', { dir, paths, untracked })
 }
 
+/**
+ * Discard a mixed set.
+ *
+ * A tracked file is reverted and an untracked one is deleted — different git
+ * commands — so a mixed selection is two calls. Tracked goes first so that if
+ * the second fails, what remains on disk is the untracked files, which are the
+ * ones git never knew about anyway.
+ */
+export async function discardMixed(
+  dir: string,
+  tracked: string[],
+  untracked: string[],
+): Promise<GitStatus | null> {
+  let last: GitStatus | null = null
+  if (tracked.length > 0) last = await discard(dir, tracked, false)
+  if (untracked.length > 0) last = await discard(dir, untracked, true)
+  return last
+}
+
 export function commit(dir: string, message: string, amend: boolean): Promise<{ output: string; status: GitStatus }> {
   return post('/commit', { dir, message, amend })
 }

@@ -156,6 +156,16 @@ export function FileList(props: Props) {
                 },
                 'Stage all',
               ),
+              h(
+                'button',
+                {
+                  className: 'gr-btn gr-btn-sm gr-btn-danger',
+                  disabled: busy,
+                  title: 'Throw away every change below — reverts tracked files and deletes untracked ones',
+                  onClick: () => props.onDiscard(unstaged),
+                },
+                'Discard all',
+              ),
             ),
             ...unstaged.map(file =>
               h(Row, {

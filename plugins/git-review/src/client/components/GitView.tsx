@@ -167,14 +167,26 @@ export function GitView(props: Props) {
 
   const onDiscard = useCallback(
     (files: GitFile[]) => {
-      const paths = files.map(f => f.path)
-      const untracked = files.every(f => f.untracked)
-      const what = paths.length === 1 ? paths[0] as string : `${paths.length} files`
+      const tracked = files.filter(f => !f.untracked).map(f => f.path)
+      const untracked = files.filter(f => f.untracked).map(f => f.path)
+      const what = files.length === 1 ? (files[0] as GitFile).path : `${files.length} files`
+      // Say which of the two it is, because they are not the same act: a
+      // tracked file goes back to its committed state, an untracked one is
+      // deleted outright.
+      const label =
+        tracked.length > 0 && untracked.length > 0
+          ? `Discard changes in ${tracked.length} file${tracked.length === 1 ? '' : 's'} and DELETE ${untracked.length} untracked file${untracked.length === 1 ? '' : 's'}?`
+          : untracked.length > 0
+            ? `Delete ${what}? This file is untracked — it is not in git, so it cannot be recovered.`
+            : `Discard changes in ${what}? This cannot be undone.`
       setPending({
         kind: 'discard',
-        label: untracked ? `Delete ${what}?` : `Discard changes in ${what}?`,
+        label,
         run: async () => {
-          await run(() => api.discard(dir as string, paths, untracked))
+          await run(async () => {
+            const next = await api.discardMixed(dir as string, tracked, untracked)
+            return next ?? (await api.fetchStatus(dir as string))
+          })
           setSelection(null)
         },
       })
