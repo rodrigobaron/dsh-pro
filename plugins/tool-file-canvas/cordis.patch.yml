@@ -1,7 +1,14 @@
-# The contained reader behind GET /canvas/file, which the panel fetches
-# envelopes and image/PDF bytes from. It lives in the web profile because it
-# needs `webServer`; the `show_file` tool half is an agent-preset row instead
-# (agent.preset.yml), because `tools` is a different Cordis context.
+# The `show_file` tool, and the contained reader behind GET /canvas/file that
+# the artifact panel fetches envelopes and image/PDF bytes from.
+#
+# Both are PROFILE rows. The tool used to be an agent-preset row, which limited
+# it to the one preset that listed it; it now watches `agent/created` and
+# registers into each agent's own `agent.ctx.tools`, so every preset gets it.
+# The tool stays restricted until the model loads the `file-artifacts` skill.
+- insert:
+    - id: tool-file-canvas
+      name: '@my-dsh/tool-file-canvas'
+
 - insert:
     - id: host-file-canvas-route
       name: '@my-dsh/tool-file-canvas/route'

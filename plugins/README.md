@@ -13,7 +13,7 @@ Then restart the harness.
 
 | Directory | What it adds |
 | --- | --- |
-| `tool-file-canvas` | the `show_file` tool and the contained `GET /canvas/file` reader |
+| `tool-file-canvas` | the `show_file` tool (behind the `file-artifacts` skill) and the contained `GET /canvas/file` reader |
 | `client-ui-file-canvas` | the artifact panel and its renderers |
 | `client-ui-layout-wide` | a wide, resizable details column |
 | `context` | a context dashboard tab and the `/context` command |
@@ -45,10 +45,19 @@ A plugin directory holds a `package.json` and may contribute:
 | `cordis.patch.yml` | loader rows merged into the profile patch |
 | `agent.preset.yml` | rows appended to the `artifacts` agent preset |
 
-The two row files exist because a plugin's halves live in **different Cordis
-contexts**. Profile rows see services like `webServer`; only an agent preset
-sees `tools`. A plugin registering a model-facing tool therefore needs an
-`agent.preset.yml`, and cannot get there through the profile patch.
+`agent.preset.yml` is the conventional way to add a model-facing tool, and it
+is what every shipped tool plugin uses — but it confines the tool to presets
+that list it.
+
+There is a second route, and it is usually the better one: a **profile** plugin
+can inject `agents`, watch `agent/created`, and register into that agent's own
+`agent.ctx.tools`. The tool then exists under every preset. `tool-file-canvas`
+and `vision-toolkit` both do this; nothing here uses `agent.preset.yml` any
+more, though the installer still supports it.
+
+The plugin inventory shows the difference plainly: a preset-mounted tool such
+as `dsh-tool-bash` sits at fiber phase `null` until an agent instantiates it,
+while a profile-mounted one is `active` from boot.
 
 The profile patch and the preset are generated whole on every run, so
 re-running never accumulates duplicate rows.
@@ -72,7 +81,9 @@ Build output is gitignored and reproduced by the installer.
 Two triggers put a file on screen, and both produce the same envelope, so
 there is a single render path:
 
-- **the model calls `show_file`** — the envelope rides the tool result's
+- **the model calls `show_file`** — available under any preset, though hidden
+  until the model loads the `file-artifacts` skill (see below). The envelope
+  rides the tool result's
   `presentationMeta`, so the panel rebuilds from the session log alone and the
   file body never passes through the model;
 - **you click a file path in the transcript** — resolved through
@@ -80,6 +91,19 @@ there is a single render path:
 
 Images and PDFs carry a `url` rather than `content`, so the browser streams the
 bytes instead of dragging base64 through the session log.
+
+### Progressive exposure
+
+`show_file` is registered into every agent and then immediately restricted with
+`agent.ctx.tools.restrict({ deny: ['show_file'] })`, so it costs nothing in the
+tool schema until it is wanted. Calling `skill('file-artifacts')` lifts the
+restriction for that agent alone — `restrict` returns the disposer that lifts
+it, so holding that disposer is what makes the reveal possible.
+
+The skill body carries the guidance that would otherwise sit in the system
+prompt, including the distinction that actually matters: `read` pulls a file
+into the model's context, `show_file` puts it in front of the user and never
+enters context. Neither implies the other.
 
 ### Containment
 

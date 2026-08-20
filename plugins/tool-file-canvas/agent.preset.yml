@@ -1,4 +1,0 @@
-# The model-facing `show_file` tool: put any workspace file in front of the
-# user as an artifact.
-- id: tool-file-canvas
-  name: '@my-dsh/tool-file-canvas'
