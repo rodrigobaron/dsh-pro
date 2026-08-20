@@ -10,13 +10,20 @@ const COMMAND = 'deep-research'
 
 interface TriggerCandidate { name: string; description?: string }
 
+/**
+ * What a pick may do. `{ text }` replaces the trigger token with that text,
+ * which is what completes a command; returning `undefined` means "not
+ * handled", so the menu closes and nothing is inserted.
+ */
+type PickOutcome = { readonly text: string } | 'handled' | undefined
+
 interface InputTriggersFace {
   registerSource(source: {
     trigger: string
     name: string
     order?: number
     candidates(session: unknown, request: { position?: string; query: string }): Promise<readonly TriggerCandidate[]>
-    onPick(pick: unknown): 'handled' | undefined
+    onPick(pick: unknown): PickOutcome
     matchEnter(session: unknown, line: string): Promise<'handled' | undefined>
   }): () => void
 }
@@ -49,10 +56,14 @@ function apply(ctx: ClientCtx): void {
           description: 'Research a topic with a controlled multi-round search loop',
         }])
       },
-      // Picking it completes the token and leaves the cursor for the topic;
-      // it deliberately does not handle Enter, because the host expands the
-      // sent message rather than intercepting it here.
-      onPick: () => undefined,
+      // Complete the token and leave the cursor after it for the topic. This
+      // returned `undefined` at first, which reads as "not handled" — the menu
+      // closed and nothing was inserted, so the entry could be seen but never
+      // selected. The trailing space matters: `/deep-researchtopic` is a
+      // different word and the host's parser rejects it.
+      onPick: () => ({ text: `/${COMMAND} ` }),
+      // Enter is deliberately NOT handled: the message is meant to send
+      // normally, and the host expands it on the way to the model.
       matchEnter: () => Promise.resolve(undefined),
     })
   }, 'deep-research: / menu entry')

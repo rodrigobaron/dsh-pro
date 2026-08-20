@@ -774,6 +774,14 @@ as readily as from the composer. The browser half only adds the `/` menu entry
 The methodology lives in the skill, not in the injected message, so changing it
 reaches every invocation.
 
+Two `deep-research` entries appear under `/`, and both are wanted: the harness
+lists the **skill** from its own catalog, and this plugin adds the **command**.
+Picking the command returns `{ text: '/deep-research ' }` — a `PickOutcome`
+that replaces the trigger token. Returning `undefined` reads as "not handled",
+which is why the entry was visible but unselectable at first. The trailing
+space is load-bearing: `/deep-researchtopic` is a different word and the host's
+parser rejects it.
+
 ### Search is snippet-only
 
 Searches run through `@my-dsh/search`'s free engines: `web_search` (routed
