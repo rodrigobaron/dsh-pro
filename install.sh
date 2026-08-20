@@ -164,7 +164,7 @@ if [ -f "$PATCH_FILE" ] && [ ! -f "$PATCH_FILE.pre-my-dsh" ]; then
 fi
 
 {
-  echo "# Managed by my-dsh/plugins/install.sh — regenerated on every install."
+  echo "# Managed by dsh-pro/install.sh — regenerated on every install."
   echo "# A top-level YAML array of loader patch entries, merged from each"
   echo "# plugin's own cordis.patch.yml."
   for plugin in "${PLUGINS[@]}"; do
