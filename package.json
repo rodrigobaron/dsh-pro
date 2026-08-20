@@ -2,9 +2,16 @@
   "name": "my-dsh",
   "private": true,
   "description": "DeepSeek Harness plugins developed in this workspace.",
-  "workspaces": ["plugins/*"],
+  "workspaces": [
+    "plugins/*"
+  ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",
     "install-plugins": "bash plugins/install.sh"
+  },
+  "devDependencies": {
+    "saxes": "^6.0.0",
+    "tar": "^7.5.22",
+    "undici": "^8.10.0"
   }
 }
