@@ -68,6 +68,13 @@ export function apply(ctx: ClientContext): void {
       console.error(`[notification] notification creation failed: ${result.message}`)
       return result
     }
+    // Log the success too. Without this, a silent console has two very
+    // different meanings — "the browser accepted it and the OS swallowed it"
+    // and "this code never ran" — and no way to tell them apart. The settings
+    // section's own test button returns early without calling here when
+    // permission is not granted, so silence was ambiguous exactly when
+    // somebody was trying to diagnose it.
+    console.info(`[notification] shown: ${title} (tag=${tag})`)
     result.notification.onclick = () => { window.focus() }
     result.notification.onerror = () => {
       console.error('[notification] the browser reported a notification delivery error')

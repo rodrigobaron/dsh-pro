@@ -470,6 +470,23 @@ Two notes from porting it:
   harness is meant to catch, rather than against whatever a monorepo checkout
   happened to have.
 
+### Diagnosing a notification that never appears
+
+Two code paths used to produce an **empty console**, and they mean opposite
+things: the browser accepted the notification and the OS dropped it, versus the
+code never ran at all. Both now log, so one line in DevTools identifies which:
+
+| Console line | Meaning |
+| --- | --- |
+| `test skipped: browser permission is "denied"` | Permission is not actually granted, whatever the panel shows. The settings section returns before ever calling `show()`. |
+| `shown: <title> (tag=...)` | The browser constructed it successfully. If nothing appeared on screen, the block is below the browser — on macOS, **System Settings -> Notifications -> [browser]**, or a Focus mode. |
+| `notification creation failed: ...` | The constructor threw; the message says why. |
+| `turn N <session>: ... show=false (...)` | A completion was decided against. The line prints every input — permission, `backgroundOnly`, `hidden`, and which session is in view. |
+| nothing at all | The completion never reached the runner: the host projection did not advance. |
+
+The last row is the one that would indicate a real defect here; the others are
+environment or settings.
+
 The plugin also now claims its own `<style>` tag with `data-plugin`. Upstream
 leaves it unset and the harness then attributes the stylesheet to whichever
 plugin happened to be loading — it showed up in the DOM as `@my-dsh/git-review`

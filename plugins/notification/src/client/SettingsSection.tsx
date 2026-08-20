@@ -199,6 +199,11 @@ export function NotificationSettingsSection({ useSettings, set, requestPermissio
       setPermission(current)
     }
     if (current !== 'granted') {
+      // Say so in the console as well as the panel. This branch returns before
+      // sendTest(), so without a line here the console stays completely empty
+      // and looks identical to a notification that was created and then
+      // dropped by the OS.
+      console.warn(`[notification] test skipped: browser permission is "${current}", not "granted"`)
       setPermissionHint({
         key: current === 'denied' ? 'settings.permission.deniedHint' : 'settings.permission.defaultHint',
         error: true,
