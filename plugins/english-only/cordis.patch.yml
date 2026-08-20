@@ -1,4 +1,0 @@
-# English-only interface: pins the locale and drops the language selector.
-- insert:
-    - id: english-only
-      name: '@my-dsh/english-only'

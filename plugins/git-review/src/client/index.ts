@@ -18,6 +18,8 @@ import { STYLES } from './styles'
 
 const NS = 'git-review'
 
+// English only, registered under both locale ids so choosing Chinese leaves
+// this tab in English rather than rendering raw message keys.
 const DICT_EN: Record<string, string> = {
   tab: 'Git',
 }
@@ -61,7 +63,7 @@ function sessionCwd(ctx: ClientCtx, sessionId: string | undefined): string | und
 }
 
 function apply(ctx: ClientCtx): void {
-  ctx.effect(() => ctx.locale.register(NS, { en: DICT_EN }), 'git-review: dictionaries')
+  ctx.effect(() => ctx.locale.register(NS, { en: DICT_EN, zh: DICT_EN }), 'git-review: dictionaries')
   const t = ctx.locale.bind(NS)
 
   ctx.effect(() => {

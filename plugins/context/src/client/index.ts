@@ -35,11 +35,14 @@ import { React, h } from './react'
 const NS = 'dsh-context'
 
 function apply(ctx: ClientCtx): void {
-  // English dictionary; the tab label thunk and all UI text resolve through
-  // the bound translate. The registration rides ctx.effect, so a stop or HMR
+  // This plugin ships English strings only, registered under BOTH locale ids.
+  // The harness keeps its language selector, and choosing Chinese would
+  // otherwise leave these keys unresolved and render raw message keys — the
+  // same English text is a better answer than that, and it does not pretend a
+  // translation exists. The registration rides ctx.effect, so a stop or HMR
   // reload disposes it.
   ctx.effect(() => {
-    return ctx.locale.register(NS, { en: DICT_EN })
+    return ctx.locale.register(NS, { en: DICT_EN, zh: DICT_EN })
   }, 'dsh-context: dictionaries')
   const t = ctx.locale.bind(NS)
 
