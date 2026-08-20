@@ -1,0 +1,39 @@
+This package is derived from dsh-timer-agent, used under the MIT License. The
+original project lives at:
+
+    https://github.com/linxin666/dsh-timer-agent
+
+Upstream ships real TypeScript sources, so this is a port rather than a
+repackage: src/ is upstream's host-side code with the changes below, compiled
+here with esbuild instead of tsdown.
+
+Renamed throughout to @my-dsh/routines. The route family moved from
+/api/dsh-timer-agent/* to /api/routines/*, the ledger from
+~/.dsh/timer-agent/jobs.json to ~/.dsh/routines/jobs.json, and the
+model-facing tool from `timer_agent` to `routines`. The route prefix is a
+single exported constant, because a package name is not a URL path and the two
+should not be able to drift into each other.
+
+No sidebar. Upstream mounts a sidebar entry and a scheduled-jobs board; this
+build carries neither, so the conversation surface is untouched. The whole of
+upstream's src/client/ is dropped, and with it the CSS-module build step its
+board needed. The browser half here is ours: one Routines section on the
+settings page that lists routines and creates, pauses, resumes, runs, and
+deletes them over the same routes.
+
+English only. Upstream's dictionaries, sidebar label, tool description, and the
+system-prompt guidance are Simplified Chinese; all of it is translated. The
+guidance matters most, because it is the model's entire view of the capability.
+
+What is kept from upstream, and is the reason to port rather than rewrite: the
+engine. A 60-second ticker resident in the dsh web process, at-most-once firing
+(nextRunAt rolls forward BEFORE a run, so a crash mid-run cannot double-fire),
+skip-while-running, atomic ledger writes that degrade safely on a corrupt file,
+5-field cron parsing with local-time semantics, and the three targeting modes
+(project workdir / pinned session / default workspace).
+
+Known limits, inherited and real: firing depends on the `dsh web` process being
+alive, a slot missed while it was down stays missed rather than backfilling,
+and every run costs API quota with nobody present to answer a question.
+
+The MIT License text, including its copyright notice, is in LICENSE.

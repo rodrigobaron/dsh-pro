@@ -1,0 +1,17 @@
+# Scheduled agent routines.
+#
+# The host half is the engine: a 60-second ticker resident in the dsh web
+# process, a job ledger at ~/.dsh/routines/jobs.json written atomically, the
+# model-facing `routines` tool, and the /api/routines/* route family. It runs
+# for as long as `dsh web` runs, so routines fire with the browser closed.
+#
+# The browser half is loaded from the package's `./client` export because the
+# package declares `dsh.client`, and adds a Routines section to the settings
+# page. Upstream put its UI in the sidebar; this build does not, so the
+# conversation surface stays as it was.
+#
+# Firing depends on the service being alive: a stopped service fires nothing,
+# and a slot missed while it was down stays missed rather than backfilling.
+- insert:
+    - id: routines
+      name: '@my-dsh/routines'

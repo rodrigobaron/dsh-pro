@@ -28,6 +28,7 @@ preset is default.
 | `notification` | desktop notifications when a session finishes a turn |
 | `rewind` | a rewind button on every user message: drop it and everything after |
 | `rewind-picker` | the `/rewind` command: pick the message to rewind to from a list |
+| `routines` | scheduled agent routines: a cron engine that fires real sessions |
 
 ## Adding a plugin
 
@@ -618,6 +619,47 @@ wrapper instead, and assuming that wrapper applies to the snapshot too produces
 a picker that finds 97 nodes and zero messages, with no error anywhere. If you
 read nodes from a snapshot, read the fields off the node.
 
+## Routines
+
+A cron engine that fires real agent sessions. It lives in the `dsh web` host
+process, so routines keep firing with the browser closed — and stop entirely
+when the service does.
+
+Each routine has a 5-field cron schedule and one of three targets: a project
+directory (a fresh session there each run, loading its AGENTS.md), a pinned
+session (the same conversation each run, keeping its context), or neither (a
+new conversation in the default workspace).
+
+Manage them in **Settings -> Routines**, with the model-facing `routines` tool,
+over `/api/routines/*`, or by editing `~/.dsh/routines/jobs.json`. One ledger,
+four doorways.
+
+### No sidebar
+
+Upstream mounts a sidebar entry and a jobs board. This build carries neither —
+the whole of its `src/client/` is dropped, and with it the CSS-module build
+step the board needed. The settings section is ours, which is why the
+conversation surface is untouched.
+
+### What the port keeps
+
+The engine, which is the reason to port rather than rewrite: at-most-once
+firing (`nextRunAt` rolls forward *before* a run, so a crash mid-run cannot
+double-fire), skip-while-running, atomic ledger writes that degrade safely on a
+corrupt file, and cron parsing with local-time semantics.
+
+Inherited limits worth knowing: firing needs the service alive, a slot missed
+while it was down stays missed rather than backfilling, and every run costs API
+quota with nobody present — so a routine prompt must be self-contained and must
+never ask a question.
+
+### The silent-PATCH trap
+
+`PATCH /api/routines/jobs` ignores fields it does not recognise and still
+answers `200`. Pausing a routine is `scheduleEnabled`, not `enabled`; sending
+the wrong key looks like a working request that changes nothing, which is
+exactly how it presented.
+
 ## Language
 
 This repository writes English only, and English is the default. It does not
@@ -659,7 +701,7 @@ bytes* stays, because changing it would silently break the match.
 
 ## Licensing
 
-Eight plugins here are derived from other people's work. Each keeps its upstream
+Nine plugins here are derived from other people's work. Each keeps its upstream
 LICENSE, and a NOTICE recording exactly what was changed:
 
 | Plugin | Upstream | License |
@@ -671,6 +713,7 @@ LICENSE, and a NOTICE recording exactly what was changed:
 | `search` | [DDDMUC/dsh-free-search](https://github.com/DDDMUC/dsh-free-search) | MIT |
 | `notification` | [omdsh-dev/dsh-notification](https://github.com/omdsh-dev/dsh-notification) | MIT |
 | `rewind` | [omdsh-dev/dsh-recall](https://github.com/omdsh-dev/dsh-recall) | MIT |
+| `routines` | [linxin666/dsh-timer-agent](https://github.com/linxin666/dsh-timer-agent) | MIT |
 | `browser` | [Clizo1209/dsh-playwright-browser](https://github.com/Clizo1209/dsh-playwright-browser) | MIT |
 
 Everything else in this directory is MIT and original to this repository.
