@@ -9,6 +9,7 @@
 import type * as ReactNS from 'react'
 import { React, h } from './react.ts'
 import { requestRewind, restoreDraft, rewindPoints } from './api.ts'
+import { takePendingConsume } from './store.ts'
 import type { ClientCtx, SessionStandardProps } from './services.ts'
 
 type Translate = (key: string, params?: Record<string, string | number>) => string
@@ -87,6 +88,17 @@ export function makePicker(
       storeOf(sessionId).set(false)
       setSelected(null)
       setError(null)
+      // Take the `/rewind` token out of the composer. The guard is a CAS, so a
+      // draft the user changed meanwhile is left untouched inside the shell.
+      const guard = takePendingConsume(sessionId)
+      if (guard === undefined) return
+      try {
+        const scope = (ctx.sessions as { scope?(id: string): unknown } | undefined)?.scope?.(sessionId)
+        const bail = (scope as { bail?(scope: unknown, event: string, payload: unknown): void } | undefined)?.bail
+        if (scope !== undefined && typeof bail === 'function') bail.call(scope, scope, 'slash/input-consume-token', { guard })
+      } catch (error) {
+        console.warn('[rewind-picker] could not consume the command token:', error)
+      }
     }, [sessionId, storeOf])
 
     // Escape closes, matching every other dialog in the app.
@@ -114,12 +126,14 @@ export function makePicker(
         setError(t(errorKey(code), { message }))
         return
       }
-      // The other half of a rewind: the message comes back for editing.
-      restoreDraft(ctx, sessionId, point.text)
       // The host answers with the session's full rewound set, so the transcript
       // hides the exchange that just left the model's history.
       hooks.onRewound(sessionId, { ids: result.value?.ids ?? [], seqs: result.value?.seqs ?? [] })
+      // Close FIRST: closing consumes the `/rewind` token, and doing that after
+      // the restore would edit the draft the restore had just written.
       close()
+      // The other half of a rewind: the message comes back for editing.
+      restoreDraft(ctx, sessionId, point.text)
     }
 
     const body = total === 0

@@ -176,13 +176,19 @@ const CSS = `
   font-size: 13px;
   cursor: pointer;
 }
-.dsh_rewind_btn:hover:not(:disabled) { background: var(--dsw-alias-interactive-bg-hover); }
 .dsh_rewind_btn:disabled { opacity: 0.45; cursor: default; }
+/* Secondary only: on the primary this grey would paint over the brand fill and
+   the button would go DARK on hover, which read as disabled. */
+.dsh_rewind_btn:not(.dsh_rewind_primary):hover:not(:disabled) { background: var(--dsw-alias-interactive-bg-hover); }
 .dsh_rewind_primary {
   border-color: transparent;
   background: var(--dsw-alias-brand-primary);
   color: var(--dsw-alias-label-primary-foreground, #fff);
 }
+/* Keep the brand colour and just lift it, so hover reads as "more", not "off".
+   A filter needs no second brand token that may not exist. */
+.dsh_rewind_primary:hover:not(:disabled) { filter: brightness(1.12); }
+.dsh_rewind_primary:active:not(:disabled) { filter: brightness(0.94); }
 `
 
 /** Inject the stylesheet once per document. */

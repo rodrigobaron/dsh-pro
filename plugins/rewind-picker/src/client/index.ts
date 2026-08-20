@@ -15,7 +15,7 @@ import { applyHiding } from './hide.ts'
 import { requestRewindState, type RewoundState } from './api.ts'
 import { makePicker } from './Picker.tsx'
 import { en, NS } from './locales.ts'
-import { pickerStoreOf } from './store.ts'
+import { pickerStoreOf, setPendingConsume } from './store.ts'
 import { ensureStyles } from './styles.ts'
 import type { ClientCtx, InputTriggersFace } from './services.ts'
 import { h } from './react.ts'
@@ -52,11 +52,15 @@ function apply(ctx: ClientCtx): void {
         return Promise.resolve([{ name: COMMAND, description: t('cmd.desc') }])
       },
       onPick: (pick) => {
+        // Remember the token span so closing the dialog removes `/rewind`
+        // from the composer, leaving room for the rewound message.
+        setPendingConsume(pick.session.sessionId, { kind: 'span', span: pick.span })
         pickerStoreOf(pick.session.sessionId).set(true)
         return 'handled'
       },
       matchEnter: (session, line) => {
         if (line.trim() !== LINE) return Promise.resolve(undefined)
+        setPendingConsume(session.sessionId, { kind: 'bare-token', token: LINE })
         pickerStoreOf(session.sessionId).set(true)
         return Promise.resolve<'handled'>('handled')
       },
@@ -147,6 +151,6 @@ function apply(ctx: ClientCtx): void {
 
 module.exports = {
   name: 'rewind-picker',
-  inject: ['slots', 'locale'],
+  inject: ['slots', 'locale', 'sessions'],
   apply,
 }

@@ -580,6 +580,25 @@ transcript hiding keys rows by, and **seqs**, which the picker uses to drop
 already-rewound messages from its list — offering one again could only produce
 a refusal, since it is no longer a surface node.
 
+### Giving the composer back
+
+A rewind puts the message back in the composer to edit. From the command that
+needed two things the first pass missed.
+
+`sessions` has to be in the client plugin's `inject` list. `restoreDraft`
+resolves the composer through `ctx.sessions.scope(sessionId)`, and without the
+injection that is `undefined` — so the restore returned false and did nothing,
+silently, while the button path (which never had a token in the way) looked
+fine.
+
+The `/rewind` token also has to be consumed, the same way `/context` does it:
+the token stays in the composer while the dialog is open, and closing
+dispatches `slash/input-consume-token` with a guard recorded at open time — a
+span CAS for a menu pick, bare-token equality for Enter. A stale guard fails
+soft inside the shell and leaves a draft the user edited alone. Closing happens
+*before* the restore, so consuming the token cannot edit the text the restore
+just wrote.
+
 ### Dialog layout
 
 The overlay slot renders inside the composer's container, so an absolutely
