@@ -7,7 +7,9 @@ installs all of them.
 ./plugins/install.sh
 ```
 
-Then restart the harness.
+Then restart the harness. The installer touches only the profile patch and
+`profiles/node_modules`; it creates no agent preset and does not change which
+preset is default.
 
 ## Plugins
 
@@ -43,21 +45,26 @@ A plugin directory holds a `package.json` and may contribute:
 | --- | --- |
 | `package.json` | required. `name` decides the install path; a `scripts.build` entry is run first |
 | `cordis.patch.yml` | loader rows merged into the profile patch |
-| `agent.preset.yml` | rows appended to the `artifacts` agent preset |
 
-`agent.preset.yml` is the conventional way to add a model-facing tool, and it
-is what every shipped tool plugin uses — but it confines the tool to presets
-that list it.
+**This repository creates no agent preset.** An agent-preset row is the
+conventional way to give the model a tool, and it is what every shipped tool
+plugin uses — but it confines the tool to presets that list it, and a preset
+this repo owns is one more thing to install, rename, and orphan sessions with.
 
-There is a second route, and it is usually the better one: a **profile** plugin
-can inject `agents`, watch `agent/created`, and register into that agent's own
-`agent.ctx.tools`. The tool then exists under every preset. `tool-file-canvas`
-and `vision-toolkit` both do this; nothing here uses `agent.preset.yml` any
-more, though the installer still supports it.
+Instead, a plugin registers its tool into `agent.ctx.tools` when its skill
+loads, reading the agent off `exec.agent` in a `tools/result` handler. The tool
+then works under whatever presets the deployment already has — `standard`,
+`code`, `minimal`, or the user's own — and costs nothing in agents that never
+ask for it. `tool-file-canvas` and `vision-toolkit` both work this way.
 
-The plugin inventory shows the difference plainly: a preset-mounted tool such
-as `dsh-tool-bash` sits at fiber phase `null` until an agent instantiates it,
-while a profile-mounted one is `active` from boot.
+Two traps worth knowing if you copy the pattern:
+
+- `tools.restrict()` filters the **global** tool surface. It rejects an
+  agent-scoped registration ("names unknown global tool"), and the throw lands
+  inside your event handler. Gate by registering late, not by registering early
+  and hiding.
+- `SkillRegistration` requires `source` (use `'runtime'`). Omitting it registers
+  the skill fine and fails only when the model tries to load it.
 
 The profile patch and the preset are generated whole on every run, so
 re-running never accumulates duplicate rows.

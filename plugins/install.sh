@@ -8,9 +8,10 @@
 #   package.json      required. `name` decides where it installs, and a
 #                     `scripts.build` entry is run before it is copied.
 #   cordis.patch.yml  optional. Loader rows merged into the profile patch.
-#   agent.preset.yml  optional. Rows appended to the `artifacts` agent preset,
-#                     for plugins registering a tool (`tools` is agent-scoped,
-#                     so a tool cannot be a profile row).
+#
+# No agent preset is created. A plugin that wants to give the model a tool
+# registers it into `agent.ctx.tools` when its skill loads, which works under
+# every preset the deployment already has — see tool-file-canvas.
 #
 # Idempotent: the profile patch and the preset are generated whole on every
 # run, so re-running cannot accumulate duplicate rows.
@@ -21,8 +22,6 @@ PLUGINS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(dirname "$PLUGINS_DIR")"
 PROFILE_MODULES="$DSH_HOME/profiles/node_modules"
 PATCH_FILE="$DSH_HOME/profiles/web/cordis.patch.yml"
-PRESET_ID="artifacts"
-PRESET_DIR="$DSH_HOME/.agent-presets/$PRESET_ID"
 
 echo "my-dsh plugin installer"
 echo "  DSH_HOME: $DSH_HOME"
@@ -44,7 +43,9 @@ pkg_field() { node -p "JSON.parse(require('fs').readFileSync('$1/package.json','
 
 # ── 1. Retire the vendored dsh-artifacts install ─────────────────────────────
 # Only from DSH_HOME — the reference checkouts in the repo are left alone.
-for stale in "$PROFILE_MODULES/@dsh-artifact" "$DSH_HOME/.agent-presets/artifact" "$DSH_HOME/.agent-presets/file-canvas"; do
+# Includes the presets earlier versions of this installer created; the
+# repository no longer owns any preset.
+for stale in "$PROFILE_MODULES/@dsh-artifact" "$DSH_HOME/.agent-presets/artifact" "$DSH_HOME/.agent-presets/file-canvas" "$DSH_HOME/.agent-presets/artifacts"; do
   if [ -e "$stale" ]; then
     rm -rf "$stale"
     echo "  ✓ removed superseded $(basename "$stale")"
@@ -113,56 +114,8 @@ fi
     echo "# ── $(basename "$plugin") ─────────────────────────────────────────"
     cat "$plugin/cordis.patch.yml"
   done
-  echo
-  echo "# Mount the $PRESET_ID preset by default."
-  echo "- id: agent-presets"
-  echo "  config:"
-  echo "    default: $PRESET_ID"
 } > "$PATCH_FILE"
 echo "  ✓ wrote $PATCH_FILE"
-
-# ── 5. Generate the agent preset ─────────────────────────────────────────────
-find_standard_preset() {
-  local candidate dsh_real pkg_root
-  if command -v dsh >/dev/null 2>&1; then
-    dsh_real="$(readlink -f "$(command -v dsh)" 2>/dev/null || command -v dsh)"
-    pkg_root="$(dirname "$(dirname "$dsh_real")")"
-    candidate="$pkg_root/config/agent-presets/standard/agent.cordis.yml"
-    [ -f "$candidate" ] && { printf '%s\n' "$candidate"; return 0; }
-  fi
-  if command -v npm >/dev/null 2>&1; then
-    candidate="$(npm root -g 2>/dev/null)/@deepseek-ai/dsh/config/agent-presets/standard/agent.cordis.yml"
-    [ -f "$candidate" ] && { printf '%s\n' "$candidate"; return 0; }
-  fi
-  # npx keeps the running copy in a content-addressed cache directory.
-  candidate="$(find "$HOME/.npm/_npx" -path '*@deepseek-ai/dsh/config/agent-presets/standard/agent.cordis.yml' 2>/dev/null | head -1)"
-  [ -n "$candidate" ] && [ -f "$candidate" ] && { printf '%s\n' "$candidate"; return 0; }
-  return 1
-}
-
-STANDARD_PRESET="$(find_standard_preset || true)"
-if [ -z "$STANDARD_PRESET" ]; then
-  echo "  ! could not find the shipped standard preset" >&2
-  exit 1
-fi
-
-mkdir -p "$PRESET_DIR"
-cp "$STANDARD_PRESET" "$PRESET_DIR/agent.cordis.yml"
-for plugin in "${PLUGINS[@]}"; do
-  [ -f "$plugin/agent.preset.yml" ] || continue
-  {
-    echo
-    echo "# ── $(basename "$plugin") ─────────────────────────────────────────"
-    cat "$plugin/agent.preset.yml"
-  } >> "$PRESET_DIR/agent.cordis.yml"
-  echo "  ✓ added $(basename "$plugin") to the $PRESET_ID preset"
-done
-
-cat > "$PRESET_DIR/preset.yml" <<'PRESET'
-name: Artifacts
-description: Standard coding agent plus the show_file tool, for viewing any workspace file as an artifact — source, Markdown, HTML, images, and PDFs.
-PRESET
-echo "  ✓ wrote preset.yml"
 
 echo
 echo "Done. Restart DeepSeek Harness to apply."
