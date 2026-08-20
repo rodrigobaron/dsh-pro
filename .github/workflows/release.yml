@@ -1,0 +1,109 @@
+# Build a dsh-pro release tarball and publish it to GitHub Releases.
+#
+# The tarball holds the install already assembled — every plugin built, laid out
+# exactly as the profile wants it, plus the merged loader patch. @dsh-pro/updates
+# downloads it and swaps it into place, so updating needs no clone, no npm, and
+# no build on the far end.
+#
+# Staging runs through install.sh --stage, the same code path a local install
+# uses. A separate packaging script would be a second definition of what an
+# install is, and the two would drift the first time one of them learned about a
+# new file.
+name: release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to build and publish (e.g. v0.1.1)'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test --workspaces --if-present
+
+      # The tag is the version. If package.json disagrees, the release would
+      # install as a version nobody can reach again and the updater would keep
+      # re-offering it, so this is a hard failure rather than a warning.
+      - name: Check the tag matches package.json
+        run: |
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          VERSION="v$(node -p "require('./package.json').version")"
+          if [ "$TAG" != "$VERSION" ]; then
+            echo "::error::tag $TAG does not match package.json $VERSION"
+            exit 1
+          fi
+          echo "version: $VERSION"
+
+      - name: Stage the install
+        run: ./install.sh --stage dist
+
+      - name: Pack
+        id: pack
+        run: |
+          VERSION="$(node -p "require('./package.json').version")"
+          NAME="dsh-pro-${VERSION}.tar.gz"
+          tar -czf "$NAME" -C dist .
+          sha256sum "$NAME" > SHA256SUMS
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          cat SHA256SUMS
+
+      # A tarball that does not round-trip is worse than no release: the updater
+      # would unpack it over a working install and only then discover the
+      # damage. Unpack into a scratch dir and check the manifest and every
+      # plugin entry point survived.
+      - name: Verify the tarball
+        run: |
+          mkdir -p verify && tar -xzf "${{ steps.pack.outputs.name }}" -C verify
+          node -e '
+            const fs = require("fs")
+            const manifest = JSON.parse(fs.readFileSync("verify/manifest.json", "utf8"))
+            if (manifest.version !== "${{ steps.pack.outputs.version }}") {
+              throw new Error(`manifest version ${manifest.version} != ${{ steps.pack.outputs.version }}`)
+            }
+            if (!fs.existsSync("verify/cordis.patch.yml")) throw new Error("no cordis.patch.yml")
+            for (const name of manifest.plugins) {
+              const dir = `verify/modules/${name}`
+              const pkg = JSON.parse(fs.readFileSync(`${dir}/package.json`, "utf8"))
+              if (pkg.name !== name) throw new Error(`${dir}: package.json says ${pkg.name}`)
+              const main = pkg.main ?? "index.js"
+              if (!fs.existsSync(`${dir}/${main}`)) throw new Error(`${name}: missing ${main}`)
+            }
+            console.log(`verified ${manifest.plugins.length} plugins at v${manifest.version}`)
+          '
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          gh release create "$TAG" \
+            --title "$TAG" \
+            --generate-notes \
+            "${{ steps.pack.outputs.name }}" \
+            SHA256SUMS

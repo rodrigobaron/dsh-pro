@@ -39,6 +39,16 @@ After re-running the installer, restart that process and force-refresh the
 browser once — the client-side plugins are cached, so a plain reload serves the
 previous build.
 
+## Updating
+
+**Settings → Updates** installs the newest [release](https://github.com/rodrigobaron/dsh-pro/releases):
+the tarball CI built, checksum-verified, swapped into the profile with the
+previous install kept as a backup. Restart afterwards — see
+[updates](plugins/updates/README.md), which also covers the token a private
+repository needs.
+
+To update from a clone instead, `git pull && ./install.sh`.
+
 ## Plugins
 
 **Interface**
@@ -52,6 +62,7 @@ previous build.
 | `context` | a context dashboard tab and the `/context` command |
 | `archived-sessions` | a session manager in Settings: browse, archive, delete |
 | [`notification`](plugins/notification/README.md) | desktop notifications when a session finishes a turn |
+| [`updates`](plugins/updates/README.md) | install new releases from GitHub, verified and reversible |
 
 **Agent capabilities**
 
@@ -59,7 +70,7 @@ previous build.
 | --- | --- |
 | [`search`](plugins/search/README.md) | web search over ten free engines with automatic fallback, no API key |
 | [`browser`](plugins/browser/README.md) | drive a real Chromium tab: open, read, click, fill, screenshot |
-| `vision-toolkit` | image Q&A, OCR, grounding, pixel diff |
+| `vision-toolkit` | image Q&A, OCR, grounding, pixel diff ([free Groq key](docs/groq-vision-key.md)) |
 | [`deep-research`](plugins/deep-research/README.md) | `/deep-research <topic>`: a controlled multi-round search loop |
 
 **Conversation control**

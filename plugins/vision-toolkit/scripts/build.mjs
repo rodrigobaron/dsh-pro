@@ -37,6 +37,8 @@ const upstreamPkg = JSON.parse(await readFile(join(UP, 'package.json'), 'utf8'))
 const UPSTREAM_ID = upstreamPkg.name
 
 await rm(join(ROOT, 'lib'), { recursive: true, force: true })
+const TUTORIAL_URL = 'https://github.com/rodrigobaron/dsh-pro/blob/main/docs/groq-vision-key.md'
+
 await mkdir(join(ROOT, 'lib'), { recursive: true })
 
 // ---- host half: inline the three missing runtime deps ----------------------
@@ -62,7 +64,47 @@ const needle = `id: ${JSON.stringify(UPSTREAM_ID)}`
 if (!client.includes(needle)) {
   throw new Error(`build: ${needle} not found in upstream/lib/client.js — upstream changed its bundle preamble`)
 }
-await writeFile(join(ROOT, 'lib', 'client.js'), client.replace(needle, `id: ${JSON.stringify(pkg.name)}`))
+let clientOut = client.replace(needle, `id: ${JSON.stringify(pkg.name)}`)
+
+// ---- client half: repoint the Groq tutorial at our copy ---------------------
+// Upstream links both locale variants at its own repository. That doc now lives
+// in this repository (docs/groq-vision-key.md), English-only, so both variants
+// point at the same place. Asserted: an upstream URL change fails the build
+// rather than quietly shipping a link to somebody else's repo.
+const TUTORIAL_URLS = [
+  'https://github.com/Anionex/dsh-vision-toolkit/blob/main/docs/groq-qwen3.6-vision.md',
+  'https://github.com/Anionex/dsh-vision-toolkit/blob/main/docs/groq-qwen3.6-vision.zh.md',
+]
+for (const url of TUTORIAL_URLS) {
+  const quoted = JSON.stringify(url).replace(/"/g, "'")
+  if (!clientOut.includes(quoted)) {
+    throw new Error(`build: ${url} not found in upstream/lib/client.js — upstream moved the Groq tutorial link`)
+  }
+  clientOut = clientOut.replaceAll(quoted, JSON.stringify(TUTORIAL_URL).replace(/"/g, "'"))
+}
+
+// ---- client half: retire the upstream update panel -------------------------
+// Updating is @dsh-pro/updates' job now, and upstream's panel cannot do it here
+// regardless: it is a pnpm/npm-registry updater that requires the plugin to be
+// a direct dependency of the profile installed from a registry spec. These
+// plugins are directories copied into the profile by install.sh, so its own
+// capability check reports "not a direct dependency" and it refuses. All it can
+// render is a dead panel explaining why it will not work, next to a working
+// Updates section that does the same job.
+//
+// Hidden rather than cut out: the panel lives inside upstream's published
+// bundle, and rewriting a vendored blob's structure trades its byte-for-byte
+// fidelity for something a stylesheet does exactly as well.
+const CSS_END = '}\n`;\nfunction installStyles()'
+if (!clientOut.includes(CSS_END)) {
+  throw new Error('build: the client stylesheet literal did not end as expected — upstream reshaped its bundle')
+}
+if (!clientOut.includes('dvt-update-panel')) {
+  throw new Error('build: .dvt-update-panel is gone from upstream/lib/client.js — the hide rule is now dead code')
+}
+clientOut = clientOut.replace(CSS_END, `}.dvt-update-panel{display:none}${CSS_END}`)
+
+await writeFile(join(ROOT, 'lib', 'client.js'), clientOut)
 
 // ---- runtime payload: beside lib/, where the host half looks for it --------
 for (const dir of ['assets', 'vendor', 'runtime', 'workers', 'patches']) {

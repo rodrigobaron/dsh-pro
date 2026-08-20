@@ -1,0 +1,21 @@
+# Updating the dsh-pro plugins from GitHub Releases.
+#
+# The host half serves /api/updates/*: read the release feed, download the
+# tarball CI built, verify its sha256 against the release's SHA256SUMS, and
+# swap it into the profile with the previous install kept as a backup under
+# ~/.dsh/updates/backups.
+#
+# The browser half is loaded from the package's `./client` export because the
+# package declares `dsh.client`, and adds an Updates section to the settings
+# page.
+#
+# This does NOT restart the harness. `dsh web` is normally run in a terminal
+# somebody is watching, and relaunching it detached would take their logs away
+# and leave a process they did not start. The files land; the person restarts.
+#
+# A private repository needs a token with `contents: read`. Prefer the
+# environment (DSH_PRO_UPDATE_TOKEN, GITHUB_TOKEN) over the `token` config
+# field below — this file is plain text and gets pasted into bug reports.
+- insert:
+    - id: updates
+      name: '@dsh-pro/updates'

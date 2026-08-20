@@ -21,11 +21,36 @@ set -euo pipefail
 DSH_HOME="${DSH_HOME:-$HOME/.dsh}"
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PLUGINS_DIR="$REPO_DIR/plugins"
-PROFILE_MODULES="$DSH_HOME/profiles/node_modules"
-PATCH_FILE="$DSH_HOME/profiles/web/cordis.patch.yml"
 
-echo "dsh-pro plugin installer"
-echo "  DSH_HOME: $DSH_HOME"
+# `--stage <dir>` builds the install into <dir> instead of DSH_HOME, in exactly
+# the layout the profile wants, and adds a manifest. That is what CI packs into
+# a release tarball, and what @dsh-pro/updates unpacks on the far end. Staging
+# through the same code path as a real install is the point: a separate
+# "packaging" script is a second definition of what an install *is*, and the two
+# drift the moment one of them learns about a new file.
+STAGE_DIR=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --stage) STAGE_DIR="${2:-}"; shift 2 ;;
+    *) echo "  ! unknown argument: $1" >&2; exit 2 ;;
+  esac
+done
+
+VERSION="$(node -p "require('$REPO_DIR/package.json').version")"
+
+if [ -n "$STAGE_DIR" ]; then
+  mkdir -p "$STAGE_DIR"
+  STAGE_DIR="$(cd "$STAGE_DIR" && pwd)"
+  PROFILE_MODULES="$STAGE_DIR/modules"
+  PATCH_FILE="$STAGE_DIR/cordis.patch.yml"
+  echo "dsh-pro release staging (v$VERSION)"
+  echo "  staging into: $STAGE_DIR"
+else
+  PROFILE_MODULES="$DSH_HOME/profiles/node_modules"
+  PATCH_FILE="$DSH_HOME/profiles/web/cordis.patch.yml"
+  echo "dsh-pro plugin installer (v$VERSION)"
+  echo "  DSH_HOME: $DSH_HOME"
+fi
 echo
 
 # ── 0. Discover plugins ──────────────────────────────────────────────────────
@@ -69,12 +94,14 @@ runtime_deps() {
 # install left behind in DSH_HOME would keep loading, and its browser half
 # suppresses the harness's own workflow node — so a stale copy would leave
 # workflow runs invisible with nothing in the repo to explain why.
-for stale in "$PROFILE_MODULES/@dsh-artifact" "$PROFILE_MODULES/@my-dsh" "$PROFILE_MODULES/@dsh-pro/workflow" "$DSH_HOME/.agent-presets/artifact" "$DSH_HOME/.agent-presets/file-canvas" "$DSH_HOME/.agent-presets/artifacts"; do
-  if [ -e "$stale" ]; then
-    rm -rf "$stale"
-    echo "  ✓ removed superseded $(basename "$stale")"
-  fi
-done
+if [ -z "$STAGE_DIR" ]; then
+  for stale in "$PROFILE_MODULES/@dsh-artifact" "$PROFILE_MODULES/@my-dsh" "$PROFILE_MODULES/@dsh-pro/workflow" "$DSH_HOME/.agent-presets/artifact" "$DSH_HOME/.agent-presets/file-canvas" "$DSH_HOME/.agent-presets/artifacts"; do
+    if [ -e "$stale" ]; then
+      rm -rf "$stale"
+      echo "  ✓ removed superseded $(basename "$stale")"
+    fi
+  done
+fi
 
 # ── 2. Install dependencies for plugins that build ───────────────────────────
 NEEDS_INSTALL=0
@@ -158,7 +185,7 @@ done
 # how it collided with the shipped `[]` placeholder and left the profile
 # unparseable; owning the document removes that class of failure.
 mkdir -p "$(dirname "$PATCH_FILE")"
-if [ -f "$PATCH_FILE" ] && [ ! -f "$PATCH_FILE.pre-my-dsh" ]; then
+if [ -z "$STAGE_DIR" ] && [ -f "$PATCH_FILE" ] && [ ! -f "$PATCH_FILE.pre-my-dsh" ]; then
   cp "$PATCH_FILE" "$PATCH_FILE.pre-my-dsh"
   echo "  ✓ backed up previous patch → $(basename "$PATCH_FILE").pre-my-dsh"
 fi
@@ -176,5 +203,31 @@ fi
 } > "$PATCH_FILE"
 echo "  ✓ wrote $PATCH_FILE"
 
-echo
-echo "Done. Restart DeepSeek Harness to apply."
+# ── 5. Stamp what was installed ──────────────────────────────────────────────
+# @dsh-pro/updates compares the installed version against the newest GitHub
+# release, so an install has to leave a record of what it is. Without this the
+# updater cannot tell 0.1.0 from a build off main and would offer every release
+# forever.
+COMMIT="$(git -C "$REPO_DIR" rev-parse --short HEAD 2>/dev/null || echo unknown)"
+BUILT_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+PLUGIN_NAMES="$(for p in "${PLUGINS[@]}"; do pkg_field "$p" 'name'; done | paste -sd, -)"
+
+if [ -n "$STAGE_DIR" ]; then
+  node -e '
+    const [dir, version, commit, builtAt, names] = process.argv.slice(1)
+    const manifest = { version, commit, builtAt, plugins: names.split(",").filter(Boolean) }
+    require("fs").writeFileSync(dir + "/manifest.json", JSON.stringify(manifest, null, 2) + "\n")
+  ' "$STAGE_DIR" "$VERSION" "$COMMIT" "$BUILT_AT" "$PLUGIN_NAMES"
+  echo "  ✓ wrote $STAGE_DIR/manifest.json"
+  echo
+  echo "Staged v$VERSION. Pack $STAGE_DIR into the release tarball."
+else
+  node -e '
+    const [dir, version, commit, builtAt, names, source] = process.argv.slice(1)
+    const marker = { version, commit, builtAt, source, plugins: names.split(",").filter(Boolean) }
+    require("fs").writeFileSync(dir + "/.release.json", JSON.stringify(marker, null, 2) + "\n")
+  ' "$PROFILE_MODULES/@dsh-pro" "$VERSION" "$COMMIT" "$BUILT_AT" "$PLUGIN_NAMES" "local"
+  echo "  ✓ stamped v$VERSION"
+  echo
+  echo "Done. Restart DeepSeek Harness to apply."
+fi

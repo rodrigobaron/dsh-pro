@@ -1,0 +1,20 @@
+{
+  "//": "Original code, so this is the repository's stricter setting rather than the ported plugins' upstream-mirroring one. noUncheckedIndexedAccess earns its place here specifically: this plugin moves directories around inside a live install, and an undefined slipping through an index read is the kind of defect that deletes something.",
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2022", "DOM", "WebWorker"],
+    "jsx": "react-jsx",
+    "strict": true,
+    "noImplicitAny": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": false,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "types": ["node"]
+  },
+  "include": ["src"]
+}

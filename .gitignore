@@ -18,6 +18,7 @@ plugins/context/lib/
 plugins/git-review/lib/
 plugins/archived-sessions/lib/
 plugins/browser/lib/
+plugins/updates/lib/
 plugins/at-file/lib/
 plugins/search/lib/
 plugins/notification/lib/

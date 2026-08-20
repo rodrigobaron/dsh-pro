@@ -1,5 +1,6 @@
 {
   "name": "dsh-pro",
+  "version": "0.1.0",
   "private": true,
   "description": "A personal DeepSeek Harness environment: standalone plugins for artifacts, git review, routines, rewind, search, deep research, and more.",
   "workspaces": [
