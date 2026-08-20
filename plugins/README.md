@@ -25,6 +25,7 @@ preset is default.
 | `browser` | browser skills for the agent: open pages, read, click, fill, screenshot |
 | `at-file` | `@path` references in the composer: a workspace path picker and filter settings |
 | `search` | free web search: ten engines with automatic fallback, no API key |
+| `notification` | desktop notifications when a session finishes a turn |
 
 ## Adding a plugin
 
@@ -444,6 +445,36 @@ Engine, API keys, and cache TTL live in **Settings -> Plugins -> Free Search**,
 or `/free-search-engine` in the composer. Editing the generated profile patch
 is pointless — the installer rewrites it whole on every run.
 
+## Desktop notifications
+
+`notification` raises a browser notification when a session finishes a turn, so
+you can switch tabs and still know when DSH is done. The host half only
+registers the `notification` session projection — a bounded summary of each
+session's last completed turn; the browser half decides what to show and calls
+the Notification API. **Settings -> Notifications** holds the per-outcome
+toggles and the include/exclude keyword rules, and grants browser permission.
+
+Two notes from porting it:
+
+- **The tsconfig mirrors upstream's rather than this repository's stricter
+  default.** Turning on `noUncheckedIndexedAccess` for code never written
+  against it produced ten complaints that were style, not defects; silencing
+  them one at a time would have turned a port into a rewrite.
+
+- **One real type fix.** `observedTurn` was declared `Map<string, number>`
+  while `state.ids` carries a branded `SessionId`, so it did not check against
+  the harness actually installed here. The same file already uses
+  `Map<SessionId, ...>` for the pending runner two functions down, so this was
+  its own odd case out. Runtime behaviour is identical — a brand is erased —
+  but this is exactly the drift that type-checking against the *running*
+  harness is meant to catch, rather than against whatever a monorepo checkout
+  happened to have.
+
+The plugin also now claims its own `<style>` tag with `data-plugin`. Upstream
+leaves it unset and the harness then attributes the stylesheet to whichever
+plugin happened to be loading — it showed up in the DOM as `@my-dsh/git-review`
+owning the notification rules.
+
 ## Language
 
 This repository writes English only, and English is the default. It does not
@@ -485,7 +516,7 @@ bytes* stays, because changing it would silently break the match.
 
 ## Licensing
 
-Six plugins here are derived from other people's work. Each keeps its upstream
+Seven plugins here are derived from other people's work. Each keeps its upstream
 LICENSE, and a NOTICE recording exactly what was changed:
 
 | Plugin | Upstream | License |
@@ -495,6 +526,7 @@ LICENSE, and a NOTICE recording exactly what was changed:
 | `vision-toolkit` | [Anionex/dsh-vision-toolkit](https://github.com/Anionex/dsh-vision-toolkit) | MIT |
 | `at-file` | [omdsh-dev/dsh-at-file](https://github.com/omdsh-dev/dsh-at-file) | MIT |
 | `search` | [DDDMUC/dsh-free-search](https://github.com/DDDMUC/dsh-free-search) | MIT |
+| `notification` | [omdsh-dev/dsh-notification](https://github.com/omdsh-dev/dsh-notification) | MIT |
 | `browser` | [Clizo1209/dsh-playwright-browser](https://github.com/Clizo1209/dsh-playwright-browser) | MIT |
 
 Everything else in this directory is MIT and original to this repository.

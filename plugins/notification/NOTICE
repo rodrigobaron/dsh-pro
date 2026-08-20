@@ -1,0 +1,52 @@
+This package is a standalone port of dsh-notification by omdsh-dev, used under
+the MIT License. The original project lives at:
+
+    https://github.com/omdsh-dev/dsh-notification
+
+Upstream ships TypeScript sources, so this is a port rather than a repackage.
+The behaviour is unchanged — the host registers the `notification` session
+projection, and the browser half watches the session list, applies the
+persisted rules, and calls the Notification API. The differences are packaging
+and this repository's conventions:
+
+  - Renamed to @my-dsh/notification. The client bundle's __ModuleLoader__ id
+    follows, because the web boot manifest looks a bundle up by the installed
+    package name. The projection key stays `notification`: it is the seam's
+    key, not a package identity.
+
+  - English only. Upstream carries a Simplified Chinese dictionary as the
+    key-set source of truth with English mirroring it. This repository writes
+    English only, so the English dictionary is now the source of truth and is
+    registered under both locale ids — selecting Chinese leaves the harness in
+    Chinese and this section in English, rather than rendering raw message
+    keys from an unregistered namespace.
+
+  - One type fix. `observedTurn` was declared `Map<string, number>` while
+    `state.ids` carries a branded `SessionId`, so `live.has(id)` did not check
+    against the harness actually installed here. The same file already uses
+    `Map<SessionId, ...>` for the pending runner's maps two functions down, so
+    this was its own odd case out rather than a deliberate choice. Runtime
+    behaviour is identical — a brand is erased — but the port now type-checks
+    against the running harness.
+
+  - The tsconfig deliberately mirrors upstream's compiler options rather than
+    this repository's stricter default. Enabling noUncheckedIndexedAccess on
+    code never written against it produced ten complaints that were style, not
+    defects; silencing them one by one would have made a port into a rewrite.
+
+  - schemastery and zod are bundled rather than installed. The harness profile
+    resolves only what it ships itself.
+
+  - The ./invariant companion is dropped. It registers a no-op installer to
+    reserve package ownership in the diagnostics registry, and its own
+    docstring records that the package has no runtime invariant to assert.
+
+  - dsh.plugin.json and README.zh.md are dropped: the first is read by
+    `dsh plugin add`, which this repository does not use, and the second is a
+    translation this repository does not carry.
+
+Type-checking resolves the harness the same way @my-dsh/at-file does:
+scripts/link-harness.mjs symlinks the INSTALLED harness into node_modules
+before tsc runs, so the types can never drift from the deployment.
+
+The MIT License text, including its copyright notice, is in LICENSE.

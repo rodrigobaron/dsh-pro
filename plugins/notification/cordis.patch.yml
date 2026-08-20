@@ -1,0 +1,8 @@
+# Desktop notifications when a session finishes a turn. The host half only
+# registers the `notification` session projection — a bounded summary of each
+# session's last completed turn; the browser half decides what to show and
+# calls the Notification API, and is loaded from the package's `./client`
+# export because the package declares `dsh.client`.
+- insert:
+    - id: notification
+      name: '@my-dsh/notification'
