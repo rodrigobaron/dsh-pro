@@ -1,7 +1,10 @@
 /**
- * UI strings. English only: this deployment pins the interface locale, so a
- * second dictionary would be unreachable. A missing key falls back to the key
- * itself, handled by the harness locale service.
+ * UI strings. English only, because this repository writes English only — not
+ * because the locale is pinned. Nothing here forces a language: index.ts
+ * registers this one dictionary under both locale ids, so a user who has
+ * configured Chinese keeps a Chinese harness and reads these panels in English
+ * rather than raw message keys. A missing key falls back to the key itself,
+ * handled by the harness locale service.
  */
 
 export type Translate = (key: string, params?: Record<string, string | number>) => string
